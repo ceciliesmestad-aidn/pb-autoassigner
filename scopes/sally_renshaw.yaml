@@ -1,0 +1,33 @@
+# Scope: Sally Renshaw — Design System
+# Notes are in Norwegian (may contain English terms). Do not translate.
+# Known issue: Sally's PB email had validation issues in the April 2026 batch.
+# Verify via `pb-assigner verify-map` before bulk assigning.
+
+pm_email: sally.renshaw@aidn.no
+pm_name: Sally Renshaw
+team: Design System
+
+description_no: |
+  Sally eier designsystemet: komponenter, designtokens, ikoner, typografi,
+  designsystem.aidn-dokumentasjon, brukergrensesnitt-patterns på tvers av produktet.
+
+includes:
+  - designsystem.aidn (sterkt signal)
+  - "design system", "designsystem"
+  - Komponent-biblioteket
+  - Ikoner, typografi, farger, tokens
+  - Tilgjengelighet (WCAG) på komponentnivå
+
+excludes:
+  - Produkt-spesifikk UX-tilbakemelding om én flate → respektive PM
+
+tag_routes:
+  - "design system"
+
+keywords_strong:
+  - designsystem
+  - "design system"
+  - designsystem.aidn
+  - komponentbibliotek
+  - ikon
+  - typografi

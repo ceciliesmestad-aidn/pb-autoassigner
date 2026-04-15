@@ -1,0 +1,35 @@
+# Scope: Sandra Otteraaen — Team Treatment
+# Notes are in Norwegian (may contain English terms). Do not translate.
+
+pm_email: sandra.otteraaen@aidn.no
+pm_name: Sandra Otteraaen
+team: Team Treatment
+
+description_no: |
+  Sandra eier behandlingsdelen — særlig legemiddelhåndtering, kurve,
+  administrering av medisiner, multidose, e-resept. Også tilknyttet prosedyrer
+  og behandlingsplaner.
+
+includes:
+  - Legemiddelkurve, medisinkurve
+  - Medisinadministrering, doseringer
+  - E-resept
+  - Multidose
+  - Behandlingsplaner
+  - Prosedyrer knyttet til behandling
+
+excludes:
+  - Saksbehandling knyttet til medisin-tjenester → Kristin (Case Handling)
+  - Journalføring av behandling (sykepleie-notat) → Line (CPR)
+
+tag_routes:
+  - "team treatment"
+
+keywords_strong:
+  - legemiddel
+  - medisin
+  - kurve
+  - e-resept
+  - multidose
+  - dosering
+  - administrering

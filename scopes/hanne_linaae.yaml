@@ -1,0 +1,36 @@
+# Scope: Hanne Linaae — Team Messaging
+# Notes are in Norwegian (may contain English terms). Do not translate.
+
+pm_email: hanne.linaae@aidn.no
+pm_name: Hanne Linaae
+team: Team Messaging
+
+description_no: |
+  Hanne eier meldingsintegrasjoner mellom kommunen og andre aktører:
+  e-meldinger, PLO, sporbarhet, dialogmeldinger, henvisninger. Også
+  integrasjonsrammeverket for meldinger.
+
+includes:
+  - E-melding, dialogmelding, PLO
+  - Henvisninger og svar
+  - Sporbarhet i meldingsflyt
+  - Integrasjon mot HelseID/NHN meldingstjenester
+
+excludes:
+  - VFT/VKP-integrasjoner  → holdes åpen / OpenAidn
+  - Saksbehandlingsflyt som sender melding ut  → Kristin (Case Handling)
+
+tag_routes:
+  - "team messaging"
+
+keywords_strong:
+  - e-melding
+  - emelding
+  - dialogmelding
+  - plo
+  - sporbarhet
+  - henvisning
+  - meldingsflyt
+
+hard_negatives:
+  - "vft", "vkp-integr"  # Disse holdes åpne (OpenAidn), ikke Messaging

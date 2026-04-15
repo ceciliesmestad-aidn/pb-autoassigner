@@ -1,0 +1,30 @@
+# Secrets
+config.toml
+.env
+*.token
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Data
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+data/exports/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log

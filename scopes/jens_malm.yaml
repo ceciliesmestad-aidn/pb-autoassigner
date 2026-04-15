@@ -1,0 +1,57 @@
+# Scope: Jens Aga Malm — Team Back Office
+# Notes are in Norwegian (may contain English terms). Do not translate.
+
+pm_email: jens.malm@aidn.no
+pm_name: Jens Aga Malm
+team: Team Back Office
+
+description_no: |
+  Jens eier back-office: økonomi, faktura, arbeidsflyter for administrasjon,
+  rapportering/analyse, KOSTRA, statistikk, styringsinformasjon, Power BI.
+  "Domene over teknologi": en rapport-sak tilhører her hvis den handler om
+  analyse/styring, selv om teknologien er AI.
+
+includes:
+  - Faktura, fakturering, fakturaflyt
+  - Arbeidsflyter for administrasjon (kombinert med faktura → Jens)
+  - Rapportering, analyse, statistikk, styringsinformasjon
+  - KOSTRA-rapportering
+  - Power BI / PowerBI
+  - Egne rapporter, filtrer, ta ut rapport, tidsperiode
+  - Dokumentasjon i rapport-kontekst
+
+excludes:
+  - Rapport i sykepleie-/vakt-kontekst  → Line (CPR)
+  - Meldingsintegrasjoner               → Hanne (Messaging)
+
+tag_routes:
+  - "team back office"
+
+keywords_strong:
+  - faktur
+  - kostra
+  - statistikk
+  - styringsinformasjon
+  - powerbi
+  - power bi
+  - rapportering
+  - analyse
+
+disambiguations:
+  - term: rapport
+    route_here_when:
+      - kostra
+      - statistikk
+      - filtrer
+      - ta ut
+      - egne rapport
+      - tidsperiode
+      - dokumentasjon
+      - klokkeslett
+      - rapportering
+      - powerbi
+      - power bi
+      - styringsinformasjon
+  - term: faktura + arbeidsflyt
+    route_here_always: true
+    why: "Faktura i kombinasjon med arbeidsflyt er Back Office, ikke AI/Automation."

@@ -1,0 +1,47 @@
+# PB_assignerV2 configuration
+# Copy to config.toml and fill in. config.toml is gitignored.
+
+[productboard]
+# PB API token. Also honoured via env var PB_TOKEN.
+token = ""
+# Disable SSL verification (needed behind Aidn corporate proxy).
+ssl_verify = false
+# Rate-limit delay between PATCH calls, in seconds.
+patch_delay_seconds = 0.3
+
+[anthropic]
+# Anthropic API key. Also honoured via env var ANTHROPIC_API_KEY.
+api_key = ""
+# Default classification model.
+model_default = "claude-haiku-4-5-20251001"
+# Escalation model when default-model confidence is below `escalate_below`.
+model_escalate = "claude-sonnet-4-6"
+# Re-classify on the escalation model when default confidence < this.
+escalate_below = 0.6
+# Number of notes per classification call.
+batch_size = 10
+# Disable TLS verification for the Anthropic client (needed behind Aidn corporate proxy).
+ssl_verify = false
+# HTTP timeout in seconds for Anthropic calls.
+timeout_seconds = 60.0
+
+[classifier]
+# Confidence below this is flagged as "needs attention" in the UI.
+needs_attention_below = 0.6
+# Notes with confidence below this are never auto-assigned (reserved for future autopilot).
+autopilot_min_confidence = 0.8
+
+[training]
+# Days of history to pull from PB per PM for training (notes owned by that PM).
+# 180 = ~6 months — enough signal for most PMs without being too stale.
+window_days = 180
+# Minimum notes a PM must have owned in the window before we propose an update.
+min_notes_per_pm = 5
+
+[server]
+host = "127.0.0.1"
+port = 8765
+
+[storage]
+db_path = "data/pb_assigner.db"
+scopes_dir = "scopes"

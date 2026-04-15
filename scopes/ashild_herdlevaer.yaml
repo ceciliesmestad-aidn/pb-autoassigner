@@ -1,0 +1,35 @@
+# Scope: Ashild Dronen Herdlevaer — Team Collaboration
+# Notes are in Norwegian (may contain English terms). Do not translate.
+
+pm_email: ashild.herdlevaer@aidn.no
+pm_name: Ashild Dronen Herdlevaer
+team: Team Collaboration
+
+description_no: |
+  Ashild eier samhandling: oppgaver mellom brukere, arbeidslister, tavler,
+  kommunikasjon internt i kommunen, intern oppgavefordeling.
+
+includes:
+  - Oppgaver mellom kollegaer (ikke pasient/journal, ikke saksbehandling)
+  - Arbeidslister, tavler
+  - Intern kommunikasjon
+  - Samhandlingsflyt
+
+excludes:
+  - Oppgaver i journal/kartleggings-kontekst   → Line (CPR)
+  - Oppgaver i saksbehandlings-kontekst        → Kristin (Case Handling)
+
+tag_routes:
+  - "team collaboration"
+
+keywords_strong:
+  - arbeidsliste
+  - tavle
+  - samhandling
+
+disambiguations:
+  - term: oppgaver
+    default_route_here: true
+    route_elsewhere_when:
+      - [journal, kartlegging, pasient] → line.adde@aidn.no
+      - [tjeneste, vedtak, saksbehandl] → kristin.hoiaas@aidn.no

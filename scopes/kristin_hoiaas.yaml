@@ -1,0 +1,46 @@
+# Scope: Kristin Shovick Hoiaas — Team Case Handling
+# Notes are in Norwegian (may contain English terms). Do not translate.
+
+pm_email: kristin.hoiaas@aidn.no
+pm_name: Kristin Shovick Hoiaas
+team: Team Case Handling
+
+description_no: |
+  Kristin eier saksbehandling i kommunal helse: søknad → utredning → vedtak →
+  tjenestetildeling → revurdering. Også tjeneste-registrering (tannhelse osv.)
+  og tale-til-tekst i saksbehandlingskontekst.
+
+includes:
+  - Søknad, utredning, vedtak
+  - Saksbehandlingsløp, saksflyt
+  - Tjenestetildeling
+  - Revurdering (sterkt signal — alltid Kristin)
+  - Tjenesteregistrering (f.eks. tannhelse)
+  - Tale-til-tekst brukt i saksbehandling/kartlegging
+  - Oppgaver i sakshandlings-kontekst (tjeneste, vedtak, saksbehandl)
+
+excludes:
+  - Journal / sykepleiedokumentasjon           → Line (CPR)
+  - Faktura selv om det kobles mot vedtak      → Jens (Back Office)
+  - Meldinger ut av kommunen (e-melding, PLO)  → Hanne (Messaging)
+
+tag_routes:
+  - "team case handling"
+
+keywords_strong:
+  - saksbehandl
+  - vedtak
+  - revurdering
+  - tjenestetildeling
+  - søknad
+  - utredning
+
+disambiguations:
+  - term: revurdering
+    route_here_always: true
+    why: Revurdering er et entydig saksbehandlingsbegrep i Aidn.
+  - term: tale-til-tekst
+    route_here_when: [saksbehandl, kartlegg, vedtak]
+    default_route: erik.story@aidn.no   # "AI/automation" når ingen sakskontekst
+  - term: oppgaver
+    route_here_when: [tjeneste, vedtak, saksbehandl]

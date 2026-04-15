@@ -1,0 +1,32 @@
+# Scope: Abraham Guzman — Team IAM
+# Notes are in Norwegian (may contain English terms). Do not translate.
+
+pm_email: abraham.guzman@aidn.no
+pm_name: Abraham Guzman
+team: Team IAM
+
+description_no: |
+  Abraham eier identitet og tilgangsstyring: innlogging, SSO, HelseID-autentisering,
+  tilgangsroller, organisasjonsstruktur for tilganger, delegering.
+
+includes:
+  - Innlogging, autentisering
+  - SSO, HelseID-login
+  - Tilgangsroller, tilgangsstyring
+  - Org-struktur for tilganger
+  - Delegering av tilgang, bytte kontekst
+
+excludes:
+  - Meldingsintegrasjon mot HelseID (ikke login) → Hanne (Messaging)
+
+tag_routes:
+  - "team iam"
+
+keywords_strong:
+  - innlogging
+  - autentisering
+  - tilgang
+  - rolle
+  - helseid-login
+  - sso
+  - delegering

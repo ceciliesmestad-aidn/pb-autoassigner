@@ -1,0 +1,30 @@
+# Scope: Therese Borter — Team Navigator
+# Notes are in Norwegian (may contain English terms). Do not translate.
+
+pm_email: therese.borter@aidn.no
+pm_name: Therese Borter
+team: Team Navigator
+
+description_no: |
+  Therese eier Navigator — hovednavigasjon, søk, hjem-flate, "hvordan kommer
+  brukeren seg rundt i appen". Typisk tverrgående UX som ikke tilhører én
+  domeneflate.
+
+includes:
+  - Hovednavigasjon, menystruktur
+  - Søk på tvers av appen
+  - Hjem-/landingsflate
+  - Global navigasjon og hurtigveier
+
+excludes:
+  - Navigasjon internt i én domene-flate → respektive PM
+
+tag_routes:
+  - "team navigator"
+
+keywords_strong:
+  - navigasjon
+  - meny
+  - søk
+  - hjem
+  - landingsflate

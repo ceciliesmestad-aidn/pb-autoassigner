@@ -1,0 +1,47 @@
+# Scope: Line Adde — Team CPR (Core Patient Record)
+# Notes are in Norwegian (may contain English terms). Do not translate.
+# Edited via `pb-assigner train` or directly in this file.
+
+pm_email: line.adde@aidn.no
+pm_name: Line Adde
+team: Team CPR
+
+description_no: |
+  Line eier kjernejournalen / EPJ-funksjonalitet: pasientjournal, kartlegging,
+  vitale målinger, journalnotater, pasientdata, legemiddelkurve (i samspill med
+  Treatment). Alt som handler om "hva står i journalen" og
+  dokumentasjonsflyten i vakta.
+
+includes:
+  - Journalnotater, journalstruktur, historikk
+  - Kartlegging av pasient (skjema, verktøy)
+  - Rapport i sykepleie-kontekst (nattvakt, avdeling, overlevering)
+  - Vitale målinger, observasjoner
+  - Pasientdata og dokumentasjon
+  - Oppgaver knyttet til pasientjournal (journal, kartlegging, pasient)
+
+excludes:
+  - Saksbehandling, vedtak, tjenestetildeling  → Kristin (Case Handling)
+  - Legemiddelkurve-spesifikt                  → Sandra (Treatment)
+  - Meldinger, e-meldinger, PLO, sporbarhet    → Hanne (Messaging)
+  - Rapportering / analyse / KOSTRA            → Jens (Back Office)
+
+tag_routes:
+  - "team core patient record"
+  - "team cpr"
+
+keywords_strong:
+  - journal
+  - journalnotat
+  - kartlegging
+  - sykepleier
+  - vitale
+  - observasjon
+
+disambiguations:
+  - term: rapport
+    route_here_when: [natt, sykepleier, vakt, avdeling, overlevering]
+    route_elsewhere_when:
+      - kostra, statistikk, styringsinformasjon → jens.malm@aidn.no (analytics)
+  - term: oppgaver
+    route_here_when: [journal, kartlegging, pasient]

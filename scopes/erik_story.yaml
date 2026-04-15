@@ -1,0 +1,40 @@
+# Scope: Erik Story — Team Patient / Team AI & Automation
+# Notes are in Norwegian (may contain English terms). Do not translate.
+
+pm_email: erik.story@aidn.no
+pm_name: Erik Story
+team: Team Patient / Team AI & Automation
+
+description_no: |
+  Erik har to hatter: Team Patient (pasientens egne flater — Mitt Aidn,
+  portal-kalender, pasient-portalen) og Team AI & Automation (AI-funksjoner,
+  automatisering, tale-til-tekst som ikke er saksbehandling).
+
+includes:
+  - Mitt Aidn / MittAidn / "Mitt Aiden" (vanlig stavefeil) — pasientportal
+  - Portal-kalender, timebestilling for pasient
+  - Pasient-selvbetjening
+  - AI-funksjoner generelt (tale-til-tekst uten saksbehandlings-kontekst)
+  - Automatiseringsmotor (eksternt orientert)
+
+excludes:
+  - Tale-til-tekst i kartlegging/saksbehandling  → Kristin (Case Handling)
+  - Intern automation-feedback ("Manuell avslutning av flyt") → ekskluder
+  - Faktura + arbeidsflyt                        → Jens (Back Office)
+
+tag_routes:
+  - "team patient"
+  - "team ai"
+  - "team automation"
+
+keywords_strong:
+  - mitt aidn
+  - mittaidn
+  - portal-kalender
+  - pasientportal
+  - pasient-selvbetjening
+  - ai-funksjon
+  - automatisering
+
+hard_negatives:
+  - "manuell avslutning av flyt"  # intern feedback, ekskluder helt

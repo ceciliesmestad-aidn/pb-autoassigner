@@ -1,0 +1,43 @@
+# Global routing principles.
+# Loaded alongside per-PM scope files; applies to every classification.
+# Edit here when the principle is cross-PM.
+
+routing_principles_no: |
+  Domene slår teknologi.
+  F.eks. "tale-til-tekst for kartlegging" → Case Handling, ikke AI.
+  F.eks. "rapport om nattevakter" → CPR, ikke Back Office.
+
+  Faktura + arbeidsflyt = Back Office (Jens), ikke AI/Automation.
+  Revurdering = alltid Case Handling (Kristin).
+  Mitt Aidn / MittAidn / Mitt Aiden (stavefeil) = Patient (Erik).
+  designsystem.aidn eller "design system" = Design System (Sally).
+
+exclude_rules:
+  # Returner pm_email: null ("leave open") for disse — ikke kast bort PM-tid.
+  - when_all:
+      - company: "Aidn" eller "aidn.no"
+      - text matches regex: "\\btest\\b"
+    reason: test-notat fra Aidn-intern
+  - when_title_is_one_of:
+      - "test"
+      - "a new note"
+      - "this is yet another test"
+      - "testing forsmag"
+    reason: entydig test-tittel
+  - when_text_contains: ["manuell avslutning av flyt"]
+    reason: intern automation-tilbakemelding (ekskluderes)
+  - when_text_contains_any: ["vft", "vkp-integr"]
+    reason: VFT/VKP-integrasjon holdes åpen (OpenAidn)
+  - when_body_length_under: 25
+    AND_title_contains: "direct feedback"
+    reason: stubb-notat uten innhold
+  - when_title_contains: "slack message"
+    AND_body_length_under: 5
+    reason: tom Slack-melding
+
+confidence_guidance: |
+  0.90–1.00: entydig — tag-match, eller unikt nøkkelord (revurdering, designsystem.aidn, mitt aidn)
+  0.70–0.89: tydelig — flere sterke signaler, ingen motstridende
+  0.50–0.69: rimelig — ett sterkt signal eller flere svake
+  0.30–0.49: usikker — svake signaler, mulig motstridende
+  0.00–0.29: gjett — ingen klare signaler, vurder å la PM stå åpen (pm_email: null)

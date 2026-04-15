@@ -1,0 +1,32 @@
+# Scope: Viktor Ernholm — Team Mobile App
+# Notes are in Norwegian (may contain English terms). Do not translate.
+
+pm_email: viktor.ernholm@aidn.no
+pm_name: Viktor Ernholm
+team: Team Mobile App
+
+description_no: |
+  Viktor eier mobilappen — iOS/Android-appen for helsearbeidere ute i felt,
+  offline-synk, push-varsler, mobilspesifikke arbeidsflyter.
+
+includes:
+  - Mobilapp (iOS/Android)
+  - Offline-modus og synk
+  - Push-varsler
+  - Mobilspesifikke flows (felt, hjemmebesøk)
+
+excludes:
+  - Generelle funksjoner som også er på mobil → respektive domene-PM
+
+tag_routes:
+  - "team mobile app"
+  - "mobilapp"
+
+keywords_strong:
+  - mobilapp
+  - mobile app
+  - ios
+  - android
+  - offline
+  - push-varsel
+  - hjemmebesøk
