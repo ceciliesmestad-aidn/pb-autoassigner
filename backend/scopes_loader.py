@@ -23,7 +23,7 @@ def load_all(scopes_dir: Path) -> LoadedScopes:
     global_yaml = global_path.read_text(encoding="utf-8") if global_path.exists() else ""
 
     per_pm: dict[str, str] = {}
-    for pm in owners.PMS:
+    for pm in owners.get_all():
         path = scopes_dir / f"{pm.scope_file}.yaml"
         if not path.exists():
             continue

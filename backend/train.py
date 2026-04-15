@@ -113,7 +113,7 @@ def propose_scope_updates(
     ).isoformat(timespec="seconds")
 
     proposals: list[ProposedUpdate] = []
-    for pm in owners.PMS:
+    for pm in owners.get_all():
         # ── 1. fetch notes for this PM ────────────────────────────────────────
         if pb is not None:
             notes = _fetch_pb_notes_for_pm(pb, pm.email, since)

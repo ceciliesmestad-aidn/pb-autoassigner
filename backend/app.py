@@ -110,6 +110,15 @@ class AssignRequest(BaseModel):
     pm_email: str = Field(..., description="Canonical PM email from /api/pms")
 
 
+class CreatePMRequest(BaseModel):
+    email: str = Field(..., description="PB-registered email for the PM")
+    name: str = Field(..., min_length=1)
+    team: str = Field(..., min_length=1)
+    scope_yaml: str | None = Field(
+        None, description="Initial scope YAML; omit to get a generated template"
+    )
+
+
 class ApplyTrainingRequest(BaseModel):
     pm_email: str
     yaml_content: str
@@ -159,8 +168,54 @@ def _register_api(app: FastAPI) -> None:
     def list_pms():
         return [
             {"email": p.email, "name": p.name, "team": p.team}
-            for p in owners.PMS
+            for p in owners.get_all()
         ]
+
+    @app.post("/api/pms", status_code=201)
+    def create_pm(body: CreatePMRequest):
+        """Add a new PM to the registry and write their initial scope YAML."""
+        try:
+            pm = owners.add_pm(
+                email=body.email,
+                name=body.name,
+                team=body.team,
+                scope_file=owners.email_to_scope_file(body.email),
+            )
+        except ValueError as e:
+            raise HTTPException(409, str(e))
+
+        # Write the scope YAML.
+        cfg: Config = app.state.cfg
+        yaml_content = body.scope_yaml or _default_scope_yaml(pm)
+        from . import scopes_loader
+        scopes_loader.write_scope(cfg.scopes_dir, pm.email, yaml_content)
+
+        # Record the initial version.
+        with _conn() as conn:
+            import hashlib
+            db.record_scope_version(
+                conn,
+                pm_email=pm.email,
+                yaml_content=yaml_content,
+                content_hash=hashlib.sha256(yaml_content.encode()).hexdigest()[:16],
+                source="manual",
+                notes="Initial scope created via UI",
+            )
+
+        log.info("new PM added: %s (%s / %s)", pm.email, pm.name, pm.team)
+        return {"email": pm.email, "name": pm.name, "team": pm.team,
+                "scope_file": pm.scope_file}
+
+    @app.get("/api/pms/scope-template")
+    def pm_scope_template(email: str = Query(...), name: str = Query(""),
+                           team: str = Query("")):
+        """Return a blank scope YAML template pre-filled with the given values."""
+        from . import owners as _owners
+        pm = _owners.PM(
+            email=email, name=name, team=team,
+            scope_file=_owners.email_to_scope_file(email),
+        )
+        return {"yaml_content": _default_scope_yaml(pm)}
 
     @app.get("/api/suggestions")
     def get_suggestions(
@@ -279,7 +334,7 @@ def _register_api(app: FastAPI) -> None:
             ).fetchall()
         counts = {r["pm_email"]: r["n"] for r in rows}
         pms_status = []
-        for pm in owners.PMS:
+        for pm in owners.get_all():
             n = counts.get(pm.email, 0)
             pms_status.append({
                 "email": pm.email,
@@ -395,6 +450,35 @@ def _mount_frontend(app: FastAPI) -> None:
         if target.is_file():
             return FileResponse(target)
         return FileResponse(dist / "index.html")
+
+
+def _default_scope_yaml(pm: "owners.PM") -> str:
+    """Generate a starter scope YAML for a newly-created PM."""
+    return f"""\
+# Scope: {pm.name} — {pm.team}
+# Notes are in Norwegian (may contain English terms). Do not translate.
+
+pm_email: {pm.email}
+pm_name: {pm.name}
+team: {pm.team}
+
+description_no: |
+  Beskriv hva {pm.name} sitt team er ansvarlig for.
+
+includes:
+  - Legg til eksempler på hva som tilhører dette teamet
+
+excludes:
+  - Legg til hva som IKKE tilhører dette teamet
+
+tag_routes: []
+
+keywords_strong: []
+
+disambiguations: []
+
+hard_negatives: []
+"""
 
 
 app = create_app()

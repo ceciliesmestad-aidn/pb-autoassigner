@@ -138,6 +138,20 @@ export const api = {
       }>,
     ),
 
+  createPm: (body: { email: string; name: string; team: string; scope_yaml: string }) =>
+    fetch("/api/pms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(json<PM>),
+
+  scopeTemplate: (params: { email: string; name: string; team: string }) => {
+    const qs = new URLSearchParams(params);
+    return fetch(`/api/pms/scope-template?${qs}`).then(
+      json<{ yaml_content: string }>,
+    );
+  },
+
   logsTail: (lines = 300) =>
     fetch(`/api/logs/tail?lines=${lines}`).then(json<LogTail>),
 

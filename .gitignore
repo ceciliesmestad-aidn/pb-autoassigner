@@ -1,7 +1,10 @@
-# Secrets
+# Secrets — never commit these
 config.toml
 .env
 *.token
+
+# pms_custom.json is intentionally NOT ignored — it is the on-disk store for
+# PMs added via the UI. Commit it to keep your PM list across re-clones.
 
 # Python
 __pycache__/

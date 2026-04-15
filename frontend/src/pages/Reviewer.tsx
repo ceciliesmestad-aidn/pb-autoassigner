@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -10,6 +10,7 @@ import {
 
 export default function Reviewer() {
   const qc = useQueryClient();
+  const [showAddPM, setShowAddPM] = useState(false);
   const [pmFilter, setPmFilter] = useState<string>("");
   const [confFilter, setConfFilter] = useState<"all" | "high" | "attention">("all");
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -75,19 +76,37 @@ export default function Reviewer() {
 
   return (
     <div className="space-y-4">
+      {showAddPM && (
+        <AddPMModal
+          onClose={() => setShowAddPM(false)}
+          onCreated={() => {
+            setShowAddPM(false);
+            qc.invalidateQueries({ queryKey: ["pms"] });
+          }}
+        />
+      )}
       <div className="flex flex-wrap gap-3 items-center">
-        <select
-          value={pmFilter}
-          onChange={(e) => setPmFilter(e.target.value)}
-          className="border border-slate-300 bg-white rounded-md px-2 py-1.5 text-sm"
-        >
-          <option value="">All PMs</option>
-          {pms.data?.map((p) => (
-            <option key={p.email} value={p.email}>
-              {p.name} — {p.team}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-1">
+          <select
+            value={pmFilter}
+            onChange={(e) => setPmFilter(e.target.value)}
+            className="border border-slate-300 bg-white rounded-md px-2 py-1.5 text-sm"
+          >
+            <option value="">All PMs</option>
+            {pms.data?.map((p) => (
+              <option key={p.email} value={p.email}>
+                {p.name} — {p.team}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => setShowAddPM(true)}
+            title="Add new PM"
+            className="w-7 h-7 flex items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-lg leading-none"
+          >
+            +
+          </button>
+        </div>
         <div className="inline-flex rounded-md border border-slate-300 bg-white text-sm overflow-hidden">
           {(["all", "high", "attention"] as const).map((k) => (
             <button
@@ -190,6 +209,192 @@ export default function Reviewer() {
     </div>
   );
 }
+
+// ─── Add PM modal ────────────────────────────────────────────────────────────
+
+function AddPMModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [team, setTeam] = useState("");
+  const [scopeYaml, setScopeYaml] = useState("");
+  const [templateLoaded, setTemplateLoaded] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  const create = useMutation({
+    mutationFn: () =>
+      api.createPm({ email, name, team, scope_yaml: scopeYaml }),
+    onSuccess: onCreated,
+  });
+
+  // Load a pre-filled YAML template whenever all three fields are complete.
+  useEffect(() => {
+    if (!email || !name || !team || templateLoaded) return;
+    // Debounce: only fetch once the user pauses typing.
+    const t = setTimeout(async () => {
+      try {
+        const res = await api.scopeTemplate({ email, name, team });
+        setScopeYaml(res.yaml_content);
+        setTemplateLoaded(true);
+      } catch {
+        // Non-fatal — user can write their own YAML.
+      }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [email, name, team, templateLoaded]);
+
+  // Reset template flag when core fields change significantly.
+  useEffect(() => {
+    setTemplateLoaded(false);
+  }, [email, name, team]);
+
+  // Close on backdrop click.
+  const handleOverlay = (e: React.MouseEvent) => {
+    if (e.target === overlayRef.current) onClose();
+  };
+
+  // Close on Escape.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const valid = email.includes("@") && name.trim() && team.trim() && scopeYaml.trim();
+
+  return (
+    <div
+      ref={overlayRef}
+      onClick={handleOverlay}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+    >
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+          <h2 className="text-base font-semibold text-slate-900">Add new PM</h2>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 text-xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Email" required>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="firstname.lastname@aidn.no"
+                className="input"
+                autoFocus
+              />
+            </Field>
+            <Field label="Full name" required>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Firstname Lastname"
+                className="input"
+              />
+            </Field>
+            <Field label="Team" required className="sm:col-span-2">
+              <input
+                type="text"
+                value={team}
+                onChange={(e) => setTeam(e.target.value)}
+                placeholder="Team Name"
+                className="input"
+              />
+            </Field>
+          </div>
+
+          <Field
+            label="Scope YAML"
+            hint={
+              templateLoaded
+                ? "Template pre-filled — edit as needed."
+                : !scopeYaml && email && name && team
+                  ? "Generating template…"
+                  : "Fill in email, name and team to auto-generate a template."
+            }
+            required
+          >
+            <textarea
+              value={scopeYaml}
+              onChange={(e) => setScopeYaml(e.target.value)}
+              rows={18}
+              spellCheck={false}
+              className="input font-mono text-xs leading-relaxed resize-y"
+              placeholder="# Scope YAML will appear here once you've filled in the fields above."
+            />
+          </Field>
+
+          {create.isError && (
+            <p className="text-sm text-rose-700">
+              {(create.error as Error).message}
+            </p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-slate-200 bg-slate-50 rounded-b-lg">
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => create.mutate()}
+            disabled={!valid || create.isPending}
+            className="px-4 py-1.5 text-sm rounded-md bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-50"
+          >
+            {create.isPending ? "Saving…" : "Add PM"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  required,
+  className,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  required?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={className}>
+      <label className="block text-xs font-medium text-slate-700 mb-1">
+        {label}
+        {required && <span className="text-rose-500 ml-0.5">*</span>}
+      </label>
+      {children}
+      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+    </div>
+  );
+}
+
+// ─── Note rows ────────────────────────────────────────────────────────────────
 
 function Row(props: {
   item: Suggestion;

@@ -98,7 +98,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "verify-map":
         client = _pb_or_die(cfg)
-        emails = [p.email for p in owners.PMS]
+        emails = [p.email for p in owners.get_all()]
         counts = pb_client.verify_owner_emails(client, emails)
         for email in emails:
             c = counts.get(email, 0)
