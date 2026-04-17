@@ -40,11 +40,13 @@ def ingest(
         raise
 
     log.info("ingest: PB returned %d unassigned notes; upserting…", len(raw_notes))
+    currently_unassigned: set[str] = set()
     with db.transaction(conn):
         for raw in raw_notes:
             flat = pb_client.flatten_note(raw)
             if not flat["pb_uuid"]:
                 continue
+            currently_unassigned.add(flat["pb_uuid"])
             total_seen += 1
             _, was_inserted = db.upsert_note(conn, flat)
             if was_inserted:
@@ -52,7 +54,27 @@ def ingest(
             else:
                 updated += 1
 
-    stats = {"inserted": inserted, "updated_existing": updated, "total_seen": total_seen}
+        # Reconcile: any note we still think is pending-review but that PB no
+        # longer lists as unassigned has been handled externally (manual assign
+        # in PB, deleted, etc.). Flip to 'assigned' so the reviewer queue stays
+        # in sync with PB's live state.
+        reconciled = 0
+        stale_rows = conn.execute(
+            "SELECT id, pb_uuid FROM notes WHERE state IN ('new', 'suggested')"
+        ).fetchall()
+        for row in stale_rows:
+            if row["pb_uuid"] not in currently_unassigned:
+                db.set_note_state(conn, row["id"], "assigned")
+                reconciled += 1
+        if reconciled:
+            log.info("ingest: reconciled %d externally-handled note(s)", reconciled)
+
+    stats = {
+        "inserted": inserted,
+        "updated_existing": updated,
+        "total_seen": total_seen,
+        "reconciled": reconciled,
+    }
     with db.transaction(conn):
         db.finish_run(conn, run_id, stats)
     log.info("ingest: done — %s", stats)
