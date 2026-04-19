@@ -40,7 +40,8 @@ class PM:
 _BUILTIN_PMS: list[PM] = [
     PM("line.adde@aidn.no",          "Line Adde",              "Team CPR",                 "line_adde"),
     PM("sandra.otteraaen@aidn.no",   "Sandra Otteraaen",       "Team Treatment",           "sandra_otteraaen"),
-    PM("kristin.hoiaas@aidn.no",     "Kristin Shovick Hoiaas", "Team Case Handling",       "kristin_hoiaas"),
+    PM("kristin.shovick@aidn.no",     "Kristin Shovick Hoiaas", "Team Case Handling",       "kristin_hoiaas"),
+    PM("fredrik.behn@aidn.no",        "Fredrik Behn",           "Team OpenAIdn",             "fredrik_behn"),
     PM("hanne.linaae@aidn.no",       "Hanne Linaae",           "Team Messaging",           "hanne_linaae"),
     PM("erik.story@aidn.no",         "Erik Story",             "Team Patient",             "erik_story"),
     PM("jens.malm@aidn.no",          "Jens Aga Malm",          "Team Back Office",         "jens_malm"),

@@ -13,14 +13,32 @@ description_no: |
 includes:
   - Mitt Aidn / MittAidn / "Mitt Aiden" (vanlig stavefeil) — pasientportal
   - Portal-kalender, timebestilling for pasient
+  - Avdelingskalender, kalendersamarbeid internt
   - Pasient-selvbetjening
-  - AI-funksjoner generelt (tale-til-tekst uten saksbehandlings-kontekst)
+  - Samtykkeadministrasjon og pårørende-tilgang via Mitt Aidn
+  - Innbyggerdialog og meldingsutveksling via Mitt Aidn
+  - Digitale klager og søknader via Mitt Aidn
+  - Innhenting av dokumenter/bilder fra innbygger via Mitt Aidn
+  - Helsenorge-integrasjon (Mitt Aidn)
+  - KS DigiHelse-integrasjon
+  - Egne skjema til søkere i Mitt Aidn
+  - Ruting av søknader/henvendelser i Mitt Aidn
+  - AI-funksjoner generelt (tale-til-tekst, tale-til-sammendrag, tale-til-skjema)
+  - Talekommandoer og navigering med stemme
   - Automatiseringsmotor (eksternt orientert)
+  - Automasjonsplattform for lokal konfigurasjon av arbeidsflyter
+  - Arbeidsflyter for sykehusinnleggelser
+  - Oversettelsesfunksjonalitet (tale og tekst)
+  - ExorLive-deling via innbyggerløsning (Mitt Aidn)
+  - Gruppeaktiviteter / gruppetrening i kalender
+  - Varsler og SMS-påminnelser til pasient ved avtaler
+  - Mitt Aidn-app (mobiltilgang for pasient/pårørende)
 
 excludes:
   - Tale-til-tekst i kartlegging/saksbehandling  → Kristin (Case Handling)
   - Intern automation-feedback ("Manuell avslutning av flyt") → ekskluder
   - Faktura + arbeidsflyt                        → Jens (Back Office)
+  - Søknadssaksbehandling (endringer etter innsending, søknadsflyt internt) → Team Case Handling
 
 tag_routes:
   - "team patient"
@@ -35,6 +53,25 @@ keywords_strong:
   - pasient-selvbetjening
   - ai-funksjon
   - automatisering
+  - avdelingskalender
+  - helsenorge-integrasjon
+  - samtykkeadministrasjon
+  - pårørende-tilgang
+  - innbyggerdialog
+  - talekommandoer
+  - tale-til-sammendrag
+  - tale-til-skjema
+  - ks digihelse
+  - exorlive
+  - varsler til pasient
+  - mitt aidn app
+  - gruppeaktiviteter
+  - automasjonsplattform
+
+disambiguations:
+  - "'Avdelingskalender' tilhører Erik (kalendervisning/samarbeid), ikke rute-/turnusplanlegging → Team Workforce"
+  - "'Tale-til-tekst' i journal/kartleggingssammenheng → vurder Kristin (Case Handling) hvis kontekst er saksbehandling"
+  - "'Digitale klager' via Mitt Aidn → Erik; klagesaksbehandling internt → Team Case Handling"
 
 hard_negatives:
   - "manuell avslutning av flyt"  # intern feedback, ekskluder helt

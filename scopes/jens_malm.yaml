@@ -8,21 +8,35 @@ team: Team Back Office
 description_no: |
   Jens eier back-office: økonomi, faktura, arbeidsflyter for administrasjon,
   rapportering/analyse, KOSTRA, statistikk, styringsinformasjon, Power BI.
+  Inkluderer også plassadministrasjon (sengeoversikt, rom, belegg, institusjon),
+  egenbetaling/egenandel, hjelpemidler (KS Hjelpemidler-integrasjon),
+  og økonomiintegrasjoner (Xledger, Helfo, NAV-trekklister).
   "Domene over teknologi": en rapport-sak tilhører her hvis den handler om
-  analyse/styring, selv om teknologien er AI.
+  analyse/styring, selv om teknologien er AI (f.eks. Aidn Analytics, KI-agent).
 
 includes:
-  - Faktura, fakturering, fakturaflyt
+  - Faktura, fakturering, fakturaflyt, fakturagrunnlag, kreditering
+  - Egenbetaling, egenandel, egenandelsgrunnlag, ligningstall, bofradrag, kurdøgnpris
+  - Etteroppgjør, kontrolloppgjør, trekklister fra NAV
   - Arbeidsflyter for administrasjon (kombinert med faktura → Jens)
   - Rapportering, analyse, statistikk, styringsinformasjon
-  - KOSTRA-rapportering
-  - Power BI / PowerBI
+  - KOSTRA-rapportering, sammenligning mellom kommuner
+  - Power BI / PowerBI, Aidn Analytics, dashboards, rapportbygger
   - Egne rapporter, filtrer, ta ut rapport, tidsperiode
   - Dokumentasjon i rapport-kontekst
+  - Plassadministrasjon (rom, senger, belegg, institusjon, HDO, omsorgsboliger)
+  - Hjelpemidler, KS Hjelpemidler, KS Påkobla, hjelpemiddellager
+  - Økonomiintegrasjoner: Xledger, Helfo REST-API, KS Fiks API, NAV-integrasjon
+  - Varsling ved endring i egenandelsgrunnlag / ligningstall
+  - Ressurskrevende tjenestemottakere (rapportering og refusjon)
+  - Pasientregnskap / lommepenger
+  - Diettkoder og matombringing (der det danner grunnlag for fakturering)
+  - Automatisk taksting til HELFO (fysioterapi)
 
 excludes:
   - Rapport i sykepleie-/vakt-kontekst  → Line (CPR)
   - Meldingsintegrasjoner               → Hanne (Messaging)
+  - Plassadministrasjon som ren klinisk/logistisk saksbehandling uten økonomi/belegg-kontekst → vurder CPR
 
 tag_routes:
   - "team back office"
@@ -36,6 +50,24 @@ keywords_strong:
   - power bi
   - rapportering
   - analyse
+  - egenbetaling
+  - egenandel
+  - ligningstall
+  - bofradrag
+  - kurdøgnpris
+  - etteroppgjør
+  - plassadministrasjon
+  - sengeoversikt
+  - belegg
+  - xledger
+  - helfo
+  - hjelpemidler
+  - ks hjelpemidler
+  - aidn analytics
+  - dashboard
+  - ressurskrevende
+  - lommepenger
+  - trekkliste
 
 disambiguations:
   - term: rapport
@@ -52,6 +84,33 @@ disambiguations:
       - powerbi
       - power bi
       - styringsinformasjon
+      - aidn analytics
+      - dashboard
+      - ressurskrevende
+      - sammenligning
   - term: faktura + arbeidsflyt
     route_here_always: true
     why: "Faktura i kombinasjon med arbeidsflyt er Back Office, ikke AI/Automation."
+  - term: plassadministrasjon
+    route_here_when:
+      - belegg
+      - rom
+      - seng
+      - institusjon
+      - hdo
+      - omsorgsbolig
+      - fakturagrunnlag
+      - overlappende opphold
+    why: "Plassadministrasjon med økonomi/belegg-kontekst tilhører Back Office."
+  - term: hjelpemidler
+    route_here_when:
+      - ks hjelpemidler
+      - ks påkobla
+      - hjelpemiddellager
+      - integrasjon
+      - nav hjelpemiddelsentral
+    why: "Hjelpemiddelintegrasjon (KS Hjelpemidler) eies av Back Office."
+
+hard_negatives:
+  - "rapportskjema i sykepleie/vakt-kontekst → CPR/Line"
+  - "plassadministrasjon uten økonomi/belegg-vinkel og med ren klinisk kontekst → vurder CPR"

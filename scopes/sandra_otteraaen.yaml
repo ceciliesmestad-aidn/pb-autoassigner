@@ -8,7 +8,8 @@ team: Team Treatment
 description_no: |
   Sandra eier behandlingsdelen — særlig legemiddelhåndtering, kurve,
   administrering av medisiner, multidose, e-resept. Også tilknyttet prosedyrer
-  og behandlingsplaner.
+  og behandlingsplaner. Inkluderer istandgjøring, dobbeltkontroll, narkotikaregnskap,
+  cave, legemiddelvarsling og integrasjoner mot Kjernejournal/Felleskatalogen.
 
 includes:
   - Legemiddelkurve, medisinkurve
@@ -17,6 +18,19 @@ includes:
   - Multidose
   - Behandlingsplaner
   - Prosedyrer knyttet til behandling
+  - Istandgjøring av legemidler (dosett, multidose, pakning)
+  - Dobbeltkontroll av legemidler
+  - Narkotikaregnskap (hjemmetjeneste og institusjon)
+  - Cave-registrering og legemiddelinteraksjoner
+  - Legemiddelvarsling (interaksjoner, bivirkninger, risikolegemidler)
+  - Legemiddelsamstemming (Kjernejournal, PLL)
+  - Integrasjon mot Felleskatalogen
+  - Legemiddelkabinett (Vingmed), medisinskap (VKP)
+  - Lagerstyring / varelager for medisinrom
+  - Apotek-integrasjon for lagerbestilling
+  - Utdeling av legemidler (liste, filter, kvittering)
+  - Legemiddelhistorikk og evalueringsdato
+  - Dosett og behovsmedisin i dosett
 
 excludes:
   - Saksbehandling knyttet til medisin-tjenester → Kristin (Case Handling)
@@ -33,3 +47,29 @@ keywords_strong:
   - multidose
   - dosering
   - administrering
+  - istandgjøring
+  - dosett
+  - dobbeltkontroll
+  - narkotikaregnskap
+  - cave
+  - legemiddelvarsling
+  - kjernejournal
+  - samstemming
+  - LIB
+  - PLL
+  - legemiddelkabinett
+  - varelager
+  - apotek
+  - evalueringsdato
+  - legemiddelhistorikk
+  - behovsmedisin
+
+disambiguations:
+  - "istandgjøring gjelder legemidler/dosett/multidose → Sandra, ikke generelle oppgaver"
+  - "narkotikaregnskap → Sandra (Team Treatment), ikke økonomi"
+  - "cave → legemiddelreaksjoner/allergier i legemiddelmodulen → Sandra"
+  - "samstemming → legemiddelsamstemming mot Kjernejournal → Sandra"
+
+hard_negatives:
+  - "saksbehandling (vedtak, tildeling av tjenester)"
+  - "sykepleienotat / journalnotat uten legemiddelrelasjon"

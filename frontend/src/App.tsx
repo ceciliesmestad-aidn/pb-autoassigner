@@ -7,6 +7,7 @@ import Reviewer from "./pages/Reviewer";
 import Dashboard from "./pages/Dashboard";
 import Training from "./pages/Training";
 import ConsolePage from "./pages/Console";
+import ConfigPage from "./pages/Config";
 
 type Mode = "manual" | "autopilot";
 
@@ -32,12 +33,13 @@ export default function App() {
     <div className="min-h-full flex flex-col">
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-6">
-          <div className="font-semibold text-slate-900">PB Assigner</div>
+          <div className="font-semibold text-slate-900">PB AutoAssigner</div>
           <nav className="flex gap-1 text-sm">
             <TabLink to="/reviewer">Reviewer</TabLink>
             <TabLink to="/dashboard">Dashboard</TabLink>
             <TabLink to="/training">Training</TabLink>
             <TabLink to="/console">Console</TabLink>
+            <TabLink to="/config">Config</TabLink>
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <ModeToggle mode={mode} onChange={setModePersist} />
@@ -65,6 +67,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/training" element={<Training />} />
           <Route path="/console" element={<ConsolePage />} />
+          <Route path="/config" element={<ConfigPage />} />
         </Routes>
       </main>
       {run.isError && (
@@ -113,7 +116,6 @@ function ModeToggle({
       <button
         type="button"
         onClick={() => onChange("autopilot")}
-        title="Autopilot — coming soon"
         className={[
           base,
           mode === "autopilot"
@@ -122,9 +124,6 @@ function ModeToggle({
         ].join(" ")}
       >
         Autopilot
-        <span className="ml-1 text-[10px] uppercase tracking-wide text-slate-400">
-          soon
-        </span>
       </button>
     </div>
   );

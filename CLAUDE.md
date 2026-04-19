@@ -1,154 +1,203 @@
-# CLAUDE.md — PB_assignerV2
+# CLAUDE.md — PB AutoAssigner
 
-Notes for Claude Code sessions working on this project.
+This file is read by Claude Code at the start of every session. It covers everything needed to run, use, configure, and develop this app — so Claude can answer any question about it directly.
 
-## Project one-liner
+---
 
-Productboard note assigner v2. Ingests unassigned PB notes, classifies them with Claude against per-PM YAML scope docs, and surfaces suggestions in a React review UI. Daily via launchd, manual via CLI or the `pb-assign` skill.
+## What this app does
 
-## Architecture at a glance
+Pulls unassigned notes from Productboard, uses Claude (Haiku + Sonnet) to suggest which PM should own each note based on per-PM scope documents, and shows the suggestions in a review UI. A human confirms each assignment before it's pushed back to Productboard. No autopilot — every assignment is intentional.
 
-- **Backend** (`backend/`): Python 3.11, FastAPI, SQLite (WAL), Anthropic SDK.
-- **Frontend** (`frontend/`): React 18 + Vite + TypeScript + Tailwind + TanStack Query. Dev on :5173 (proxies /api → :8765).
-- **Scopes** (`scopes/*.yaml`): per-PM routing docs, Norwegian content. Edited by training mode, versioned in the `scope_versions` table.
-- **Custom PMs** (`pms_custom.json`): PMs added via the UI — tracked in git alongside scopes.
-- **Schedule**: `launchd/com.aidn.pb-assigner.plist` — daily 07:00.
-- **Skill**: `skill/pb-assign/SKILL.md` — Claude Code interface, thin wrapper over HTTP + CLI.
+**PMs currently in the system:** Line Adde (CPR), Sandra Otteraaen (Treatment), Kristin Shovick (Case Handling), Hanne Linaae (Messaging), Erik Story (Patient), Jens Malm (Back Office), Abraham Guzman (IAM), Ashild Herdlevaer (Collaboration), Sally Renshaw (Design System), Therese Borter (Navigator), Viktor Ernholm (Mobile App), Fredrik Behn (OpenAIdn).
 
-## Important conventions
+---
 
-- UI, code, comments, docs: **English**.
-- Note content and scope YAMLs: **Norwegian** (may contain English technical terms). The classifier prompt tells the model not to translate.
-- Every DB mutation must go through `backend/pipeline.py` or the explicit helpers in `backend/db.py` so audit rows (assignments + scope_versions) stay complete. Don't bypass with raw SQL.
-- Autopilot (auto-PATCH) is deferred. All assignments are human-in-the-loop in this iteration. Do not add autopilot code paths.
+## Starting the app
 
-## Running
+**Easiest way — double-click `Start PB AutoAssigner.command` in Finder.**
+macOS will ask to confirm the first time; click Open. Terminal opens, the app starts, and the browser opens automatically at `http://localhost:5173`.
 
+**From a terminal:**
 ```bash
-# First-time setup (or use launch.sh which does all of this)
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e '.[dev]'
-cp config.example.toml config.toml   # fill in tokens (or use .env)
-python -m backend.cli init-db
-
-# Quickest start — sets up venv, installs deps, starts both servers
 ./launch.sh
-
-# Backend only (with hot reload)
-./launch.sh backend
-
-# End-to-end pipeline run via CLI
-python -m backend.cli run
-
-# Dev servers separately
-python -m backend.cli serve --reload   # FastAPI on :8765
-cd frontend && npm run dev             # Vite on :5173
 ```
+This sets up the Python venv, installs deps, initialises the database, and starts both servers. Takes ~30 seconds on first run, a few seconds after that.
 
-Tokens can live in `.env` (gitignored) as `PB_TOKEN=...` and `ANTHROPIC_API_KEY=...`; `launch.sh` loads them automatically.
+**If the browser doesn't open automatically:** go to `http://localhost:5173`
 
-## Persistence — what lives where
+**To stop:** press Ctrl+C in the Terminal window.
+
+---
+
+## First-time setup (API keys)
+
+If the app starts but nothing works, the API keys are missing.
+
+1. Open the app → click the **Config** tab
+2. Enter the **Productboard token** (found in PB → Settings → Integrations → API keys; starts with `pb_live_…`)
+3. Enter the **Anthropic API key** (found at console.anthropic.com → API keys; starts with `sk-ant-…`)
+4. Click **Test** next to each to confirm they work
+5. Click **Save** — the app reloads automatically, no restart needed
+
+Keys are stored in `config.toml` on disk and never leave the machine.
+
+---
+
+## Day-to-day usage
+
+### Reviewing and assigning notes (Reviewer tab)
+
+1. Click **Fetch notes** — pulls the latest unassigned notes from Productboard and classifies them. Notes that were manually assigned in PB since the last fetch are automatically removed from the queue.
+2. Review each suggestion. The confidence score and reasoning are shown.
+3. **Assign** to confirm the suggestion, **override** to pick a different PM, or **skip** to leave it open.
+4. Notes assigned here are immediately PATCHed to Productboard.
+
+### Adding a new PM
+
+Click the **+** button next to the PM dropdown in the Reviewer tab. Fill in email, name, and team. An initial scope YAML is generated automatically. After saving, commit `pms_custom.json` and the new file in `scopes/` to git.
+
+### Training the classifier (Training tab)
+
+The classifier is driven by scope YAML files in `scopes/`. Training improves them based on real PB data.
+
+1. Select a PM from the list on the left
+2. Choose a lookback window (1 / 3 / 6 months)
+3. Click **Propose update** — fetches that PM's recent PB notes and asks Claude to suggest edits to their scope YAML. Takes ~30 seconds.
+4. Review the diff (current vs. proposed) and the rationale
+5. Click **Apply update** if it looks right — writes the file and records the version
+
+After approving updates, commit the changed YAML files in `scopes/`.
+
+### Seeing what's happening (Console tab)
+
+Live log tail from the backend. Colour-coded: red = error, amber = warning. Useful when Fetch notes is slow or something fails.
+
+---
+
+## Scope documents
+
+`scopes/*.yaml` — one file per PM, Norwegian content. These are the core of the classifier. They describe what each PM owns, what to exclude, strong keywords, and disambiguation rules.
+
+`scopes/_global.yaml` — cross-PM routing principles (e.g. "domain beats technology", "anbud/tender is not an exclusion reason").
+
+**To fix a wrong assignment:** edit the relevant `scopes/*.yaml` file directly, or use Training mode to propose a data-driven update. After editing, click Fetch notes to re-classify the queue with the new scopes.
+
+**Known email quirks:**
+- Sandra Otteraaen: double-a in `otteraaen`
+- Kristin Shovick: email is `kristin.shovick@aidn.no` (not `hoiaas` — the old address caused 422 errors on PATCH)
+
+---
+
+## Architecture
+
+- **Backend** (`backend/`): Python 3.11, FastAPI on :8765, SQLite (WAL mode), Anthropic SDK
+- **Frontend** (`frontend/`): React 18 + Vite on :5173, TypeScript, Tailwind, TanStack Query. Dev proxies `/api` → :8765.
+- **Scopes** (`scopes/*.yaml`): per-PM routing docs, versioned in `scope_versions` DB table
+- **Custom PMs** (`pms_custom.json`): PMs added via UI, tracked in git
+
+### What lives where
 
 | Data | Location | In git? |
 |------|----------|---------|
 | PM registry (builtin) | `backend/owners.py` | ✅ Yes |
-| PMs added via UI | `pms_custom.json` (project root) | ✅ Yes — **commit this** |
-| Scope YAMLs | `scopes/*.yaml` | ✅ Yes — **commit these** |
-| Scope version history | `data/pb_assigner.db` (SQLite) | ❌ No — runtime |
-| Notes / suggestions / assignments | `data/pb_assigner.db` | ❌ No — runtime |
-| Run history / logs | `data/backend.log`, `data/` | ❌ No — ephemeral |
+| PMs added via UI | `pms_custom.json` | ✅ Yes — commit this |
+| Scope YAMLs | `scopes/*.yaml` | ✅ Yes — commit these |
+| API keys | `config.toml` | ❌ Gitignored |
+| Notes / suggestions / assignments | `data/pb_assigner.db` | ❌ Runtime only |
+| Logs | `data/backend.log` | ❌ Ephemeral |
 
-If you re-clone, run `./launch.sh` once — the pipeline will re-ingest from PB and rebuild `data/` in one run. The scope YAMLs and custom PMs are the valuable persistent config; everything else is derivable.
+If you re-clone: run `./launch.sh` once, enter keys in Config tab, click Fetch notes — everything rebuilds from PB.
 
-## Corporate proxy / SSL
+---
 
-Both the PB client (urllib) and the Anthropic SDK (httpx) have `ssl_verify = false` set by default in `config.example.toml`. This bypasses Zscaler/Netskope TLS interception. The Anthropic client is built in `backend/classify.py:build_anthropic_client()` which passes `httpx.Client(verify=False)` when disabled. Toggle per-client in `config.toml` under `[productboard]` and `[anthropic]`.
+## Configuration file
 
-## PM registry
+`config.toml` (gitignored, created from `config.example.toml`). The Config tab in the UI writes directly to this file. Key sections:
 
-Canonical source: `backend/owners.py` for builtin PMs, `pms_custom.json` for UI-added PMs.
+```toml
+[productboard]
+token = "pb_live_..."
+ssl_verify = false          # keep false behind Aidn's corporate proxy (Zscaler)
 
-Always use `owners.get_all()` — never `owners.PMS` directly — so custom PMs are included.
-The `BY_EMAIL` dict and legacy `PMS` list remain for backward compat but only cover builtins.
+[anthropic]
+api_key = "sk-ant-..."
+ssl_verify = false          # same — needed for corporate proxy
+model_default = "claude-haiku-4-5-20251001"
+model_escalate = "claude-sonnet-4-6"
+escalate_below = 0.6        # re-classify on Sonnet when confidence < this
 
-Known quirks:
-- Sandra: double-a (`otteraaen`)
-- Sally Renshaw: PB-side email was flaky in April 2026 — run `python -m backend.cli verify-map` before a bulk assign.
+[training]
+window_days = 180           # how far back to look for each PM's notes
+min_notes_per_pm = 5        # skip PMs with fewer notes than this
+```
 
-Adding a PM via the UI (`+` button in Reviewer) writes to `pms_custom.json`, creates the scope YAML in `scopes/`, and records the initial `scope_versions` row. Commit both files afterwards.
+---
 
-## PB API quirks (inherited from v1)
+## Development conventions
 
-- Base: `https://api.productboard.com`, header `X-Version: 1`
-- Paginated `GET /notes?pageLimit=2000&pageCursor=...` — 1-min cursor expiry
-- PATCH assign returns **201** on success, not 200/204 — handled in `pipeline.assign_note`
-- Rate limit: 50 req/s; we sleep 0.3s between PATCHes by default
-- No server-side "unassigned" filter — `fetch_unassigned()` fetches all and filters client-side
+- UI, code, comments: **English**
+- Note content, scope YAMLs: **Norwegian** (may contain English terms)
+- Every DB mutation goes through `backend/pipeline.py` or helpers in `backend/db.py` — keeps audit rows complete
+- No autopilot code paths — all assignments are human-in-the-loop
 
-## Classification
+### Running tests
 
-- `backend/classify.py` — `Classifier` class, `build_anthropic_client()` factory.
-- System block (prompt-cached, `cache_control: ephemeral`): global routing + all per-PM scope YAMLs concatenated. Loaded via `scopes_loader.load_all()` — uses `owners.get_all()` so custom PMs are included.
-- User message: JSON array of notes (title, body, tags, company, note_id).
-- Response: forced via a `classify_notes` tool (strict JSON schema — no freeform parsing).
-- Escalation: notes with confidence < `anthropic.escalate_below` are re-classified individually on Sonnet. Log lines show `escalating note X (conf=Y.YY)`.
-- Token cache hits show up as `cache_read=NNNN` in the INFO logs — expected after the first batch.
+```bash
+source .venv/bin/activate
+pytest tests/
+```
 
-## Training mode
+Tests use `FakePBClient` and `FakeAnthropicClient` (in `tests/conftest.py`) — no real API calls.
 
-- Primary data source: **live PB notes owned by each PM** (`pb_client.list_notes(owner_email=…)`) filtered to the last `training.window_days` days (default 180 / ~6 months). Works on day one — no need to accumulate app assignments first.
-- Secondary signal: override assignments from the local DB are grafted in as bonus context (these are the "the classifier was wrong" corrections — highest training value).
-- Skips PMs with fewer than `training.min_notes_per_pm` (default 5) notes in the window.
-- Sonnet proposes a full new YAML + a Norwegian rationale via the `propose_scope_update` tool.
-- User approves per PM in the Training tab — only then does `scope_versions` get written and the file overwritten.
-- `train.propose_scope_updates()` requires a `pb` argument (PBClient) to fetch live notes. Tests pass `pb=None` to fall back to the DB assignments path.
+### Adding a PM in code (vs. UI)
 
-## Frontend pages
+Edit `_BUILTIN_PMS` in `backend/owners.py` and create a matching `scopes/<scope_file>.yaml`. The scope filename is derived from the email local part with dots replaced by underscores.
 
-- **Reviewer** — note queue with PM filter, confidence filter, bulk-select, assign/override/skip per row. `+` button next to PM dropdown opens the Add PM modal.
-- **Dashboard** — state counts, per-PM assignment bar charts (7d/30d), confidence histogram, weekly volume.
-- **Training** — "Propose updates" triggers live PB fetch + Sonnet proposals; side-by-side YAML diff with approve button.
-- **Console** — live log tail (`/api/logs/tail`, polls every 2s) + recent runs table (`/api/runs`, polls every 5s). Color-coded: red=error, amber=warn, green=our loggers. Link from the Run-failed toast.
+---
 
-## Key API endpoints
+## API endpoints (quick reference)
 
 ```
 GET  /api/health
-GET  /api/config                  safe config subset for frontend
-GET  /api/pms                     PM list (builtin + custom)
-POST /api/pms                     add new PM (creates scope file + pms_custom.json entry)
-GET  /api/pms/scope-template      blank YAML template pre-filled with email/name/team
-GET  /api/suggestions             reviewer queue (filter: pm, confidence range)
-GET  /api/notes/{id}              full note + suggestion + assignment history
-POST /api/notes/{id}/assign       body: {pm_email}
+GET  /api/setup/status          are keys configured? (masked)
+POST /api/setup/save            write keys to config.toml + hot-reload
+POST /api/setup/test?service=   probe productboard or anthropic
+GET  /api/config                frontend config subset
+GET  /api/pms                   PM list (builtin + custom)
+POST /api/pms                   add new PM
+GET  /api/suggestions           reviewer queue
+POST /api/notes/{id}/assign     body: {pm_email}
 POST /api/notes/{id}/skip
-POST /api/run                     trigger ingest + classify in-process
-GET  /api/dashboard               aggregate stats
-GET  /api/scopes                  list scope files + combined hash
-GET  /api/scopes/{pm_email}       raw YAML + version history
-POST /api/train/propose           fetch PB notes per PM → Sonnet proposals
-GET  /api/train/readiness         per-PM assignment counts vs. min_notes_per_pm threshold
-POST /api/train/apply             write approved YAML + scope_versions row
-GET  /api/logs/tail?lines=N       last N lines of data/backend.log
-GET  /api/runs?limit=N            recent run rows (kind, started/finished, stats)
+POST /api/run                   ingest + classify
+GET  /api/dashboard             aggregate stats
+GET  /api/scopes/{pm_email}     raw YAML + version history
+POST /api/train/propose?pm_email=&window_days=
+POST /api/train/apply
+GET  /api/logs/tail?lines=N
+GET  /api/runs?limit=N
 ```
 
-## Tests / fixtures
+---
 
-`tests/test_smoke.py` exercises ingest → classify → assign → train using `FakePBClient` and `FakeAnthropicClient` (both in `tests/conftest.py`). Run: `pytest tests/`.
+## Troubleshooting
 
-- Tests set `ssl_verify=True` in the Anthropic config fixture to skip the httpx client path (the fake lambda doesn't accept `http_client`).
-- `FakePBClient` deep-copies `SAMPLE_PB_NOTES` on init to prevent cross-test mutation.
+**App won't start / browser shows "can't connect":**
+Use `http://localhost:5173` (not `127.0.0.1`). If that also fails, the servers aren't running — open Terminal and run `./launch.sh`.
 
-## Logging
+**"Productboard token not configured" error:**
+Go to Config tab and enter the PB token.
 
-`backend/app.py:_configure_logging()` installs a `RotatingFileHandler` on the root logger at startup, writing to `data/backend.log`. Uvicorn's loggers are forced to propagate to root so everything lands in one file. The Console tab tails this file live.
+**Assignment fails with 422:**
+The PM's email in `backend/owners.py` doesn't match what Productboard has on file. Run `python -m backend.cli verify-map` to check. Known issue: Kristin's email was wrong (fixed to `kristin.shovick@aidn.no`).
 
-Log conventions (all `backend.*` loggers):
-- `ingest:` prefix for pipeline ingest steps
-- `classify:` prefix for classifier steps (batch N/M, escalation decisions, token cache hits)
-- `training:` prefix for training proposals
+**Fetch notes returns 0 new notes:**
+All current PB notes are already in the queue or were assigned. This is normal.
 
-## Where NOT to look for things
+**Note assigned to wrong PM repeatedly:**
+Edit `scopes/<pm>.yaml` to strengthen or add keywords. Or use Training mode to let Claude propose an update based on real data.
 
-- There is no v1 code copied directly. v1 (`../PB_assigner`) is reference only. Domain knowledge from v1's `classifier.py` (routing principles, disambiguations, edge cases) has been moved into `scopes/*.yaml` + `scopes/_global.yaml`.
+**Rate limit error during training (429):**
+The org has a 30k token/minute limit. Train one PM at a time — use the PM selector in the Training tab.
+
+**Corporate proxy / SSL errors:**
+Both `ssl_verify = false` flags in `config.toml` (under `[productboard]` and `[anthropic]`) must be set. The Config tab doesn't expose these — edit `config.toml` directly if needed.

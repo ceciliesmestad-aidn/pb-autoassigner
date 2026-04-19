@@ -14,17 +14,34 @@ description_no: |
 
 includes:
   - Journalnotater, journalstruktur, historikk
-  - Kartlegging av pasient (skjema, verktøy)
+  - Kartlegging av pasient (skjema, verktøy, standardiserte tester)
   - Rapport i sykepleie-kontekst (nattvakt, avdeling, overlevering)
-  - Vitale målinger, observasjoner
+  - Vitale målinger, observasjoner, blodsukker, CRP, lab-registrering
   - Pasientdata og dokumentasjon
   - Oppgaver knyttet til pasientjournal (journal, kartlegging, pasient)
+  - Innkomstprosess og innkomstskjema (inkl. KAD)
+  - Smitte og smittevarsling i journalkontekst
+  - Viktig informasjon / pasientstatus (HLR, diabetes, allergier, CAVE)
+  - Sykepleiersammenfatning / funksjonsbeskrivelse
+  - Arkivering av pasientjournaler (NOARK 5, EPJ-arkiv)
+  - Sladding / anonymisering ved journaleksport og journalutskrift
+  - Tale til tekst / diktering i journaldokumentasjon
+  - Atferdsregistrering og tvangsregistrering (strukturerte skjema, frekvensmålinger)
+  - Velferdsteknologi-dokumentasjon i pasientjournalen (VFT på pasienttavlen)
+  - Palliativ plan
+  - Diagnoser, diagnosekoding (ICD-10, ICD-11, ICPC-2) i journalkontekst
+  - AK-journal (antikoagulasjon / INR)
+  - Medisinsk teknisk utstyr (strukturert registrering i journal)
+  - Egne skjema / tilpassede kartleggingsskjema
+  - Kost, væske, ernæring og varsling i journalkontekst
+  - Oversikt og lister over tjenestemottakere / pasienter
 
 excludes:
   - Saksbehandling, vedtak, tjenestetildeling  → Kristin (Case Handling)
   - Legemiddelkurve-spesifikt                  → Sandra (Treatment)
   - Meldinger, e-meldinger, PLO, sporbarhet    → Hanne (Messaging)
   - Rapportering / analyse / KOSTRA            → Jens (Back Office)
+  - KPR-rapportering / IPLOS-statistikk        → Jens (Back Office)
 
 tag_routes:
   - "team core patient record"
@@ -37,6 +54,17 @@ keywords_strong:
   - sykepleier
   - vitale
   - observasjon
+  - innkomst
+  - smitte
+  - sladding
+  - arkivering
+  - atferdsregistrering
+  - palliativ
+  - blodsukker
+  - funksjonsbeskrivelse
+  - sykepleiersammenfatning
+  - diagnoser
+  - velferdsteknologi
 
 disambiguations:
   - term: rapport
@@ -45,3 +73,17 @@ disambiguations:
       - kostra, statistikk, styringsinformasjon → jens.malm@aidn.no (analytics)
   - term: oppgaver
     route_here_when: [journal, kartlegging, pasient]
+  - term: arkivering
+    route_here_when: [journal, EPJ, pasientjournal, dødsfall, NOARK]
+    route_elsewhere_when:
+      - saksbehandling, vedtak → kristin (Case Handling)
+  - term: varsling
+    route_here_when: [smitte, journal, ernæring, kost, obstipasjon, måling]
+    route_elsewhere_when:
+      - melding, PLO, e-melding → hanne (Messaging)
+  - term: skjema
+    route_here_when: [kartlegging, innkomst, atferd, palliativ, journal]
+
+hard_negatives:
+  - blodsukker på daglige oppgaver i Back Office-kontekst  → Team Back Office
+  - hjelpemidler som utstyrsliste utenfor journalkontekst  → vurder Team Back Office

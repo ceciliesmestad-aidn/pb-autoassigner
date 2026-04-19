@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -86,13 +87,17 @@ class ProposedUpdate:
     model: str
 
 
+MAX_NOTES_PER_PM = 80   # ~8–10k input tokens; stays under the 30k/min org limit
+
 def propose_scope_updates(
     conn,
     cfg_anthropic: AnthropicConfig,
     cfg_training: TrainingConfig,
     scopes_dir,
-    pb=None,  # pb_client.PBClient — optional; if None, falls back to DB assignments
+    pb=None,           # pb_client.PBClient — optional; if None, falls back to DB
     client: anthropic.Anthropic | None = None,
+    pm_emails: list[str] | None = None,   # None = all eligible PMs
+    window_days: int | None = None,       # override cfg_training.window_days
 ) -> list[ProposedUpdate]:
     """Iterate over PMs; propose an update per eligible PM.
 
@@ -108,12 +113,20 @@ def propose_scope_updates(
     """
     client = client or classify_mod.build_anthropic_client(cfg_anthropic)
 
+    effective_window = window_days if window_days is not None else cfg_training.window_days
     since = (
-        datetime.now(timezone.utc) - timedelta(days=cfg_training.window_days)
+        datetime.now(timezone.utc) - timedelta(days=effective_window)
     ).isoformat(timespec="seconds")
 
+    # Filter to requested PM(s) if specified.
+    pm_filter = set(e.lower() for e in pm_emails) if pm_emails else None
+
     proposals: list[ProposedUpdate] = []
-    for pm in owners.get_all():
+    eligible_pms = [
+        pm for pm in owners.get_all()
+        if pm_filter is None or pm.email.lower() in pm_filter
+    ]
+    for i, pm in enumerate(eligible_pms):
         # ── 1. fetch notes for this PM ────────────────────────────────────────
         if pb is not None:
             notes = _fetch_pb_notes_for_pm(pb, pm.email, since)
@@ -124,14 +137,14 @@ def propose_scope_updates(
         if len(notes) < cfg_training.min_notes_per_pm:
             log.info(
                 "training: skipping %s — only %d notes in last %d days (need %d)",
-                pm.email, len(notes), cfg_training.window_days,
+                pm.email, len(notes), effective_window,
                 cfg_training.min_notes_per_pm,
             )
             continue
 
         log.info(
-            "training: proposing for %s — %d notes in window",
-            pm.email, len(notes),
+            "training: proposing for %s — %d notes in window (capped at %d)",
+            pm.email, len(notes), MAX_NOTES_PER_PM,
         )
 
         current = scopes_loader.read_scope(scopes_dir, pm.email) or ""
@@ -141,9 +154,19 @@ def propose_scope_updates(
 
         # ── 2. enrich with override flags from DB where available ─────────────
         override_map = _override_map(conn, pm.email, since)
-        sample = _serialise_notes_for_training(notes, override_map)
+        # Sort newest-first so the cap keeps the most recent signal.
+        notes_sorted = sorted(
+            notes,
+            key=lambda r: r.get("pb_created_at") or r.get("created_at") or "",
+            reverse=True,
+        )
+        sample = _serialise_notes_for_training(notes_sorted[:MAX_NOTES_PER_PM], override_map)
 
-        # ── 3. ask Claude to propose a scope update ───────────────────────────
+        # ── 3. rate-limit guard: sleep between PMs when processing >1 ─────────
+        if i > 0:
+            time.sleep(5)   # 30k tokens/min org limit; each call ~8–10k tokens
+
+        # ── 4. ask Claude to propose a scope update ───────────────────────────
         response = client.messages.create(
             model=cfg_anthropic.model_escalate,
             max_tokens=4096,
@@ -159,8 +182,8 @@ def propose_scope_updates(
                             "text": (
                                 f"PM: {pm.name} ({pm.email}) — {pm.team}\n\n"
                                 f"=== CURRENT SCOPE YAML ===\n{current}\n\n"
-                                f"=== NOTES OWNED BY THIS PM IN PB ({len(notes)} total, "
-                                f"last {cfg_training.window_days} days) ===\n"
+                                f"=== NOTES OWNED BY THIS PM IN PB ({len(sample)} sampled "
+                                f"from {len(notes)} total, last {effective_window} days) ===\n"
                                 f"{json.dumps(sample, ensure_ascii=False, indent=2)}"
                             ),
                         }

@@ -1,7 +1,7 @@
 # Scope: Kristin Shovick Hoiaas — Team Case Handling
 # Notes are in Norwegian (may contain English terms). Do not translate.
 
-pm_email: kristin.hoiaas@aidn.no
+pm_email: kristin.shovick@aidn.no
 pm_name: Kristin Shovick Hoiaas
 team: Team Case Handling
 
@@ -15,14 +15,29 @@ includes:
   - Saksbehandlingsløp, saksflyt
   - Tjenestetildeling
   - Revurdering (sterkt signal — alltid Kristin)
-  - Tjenesteregistrering (f.eks. tannhelse)
+  - Tjenesteregistrering (f.eks. tannhelse, lavterskeltjenester)
   - Tale-til-tekst brukt i saksbehandling/kartlegging
   - Oppgaver i sakshandlings-kontekst (tjeneste, vedtak, saksbehandl)
+  - Saksoversikt og saksflyt-UI (søkefelt, filterinnstillinger, visning)
+  - Vedtaksmaler og brevmaler (inkl. nynorsk, tidsbegrenset opphold, forvaltningsmelding)
+  - Godkjenningsflyt og godkjenningssløyfe for vedtak
+  - Tvangsvedtak og HOL kap. 9 i saksbehandlingskontekst
+  - SvarUt/SvarInn i saksbehandlingskontekst (utsending/mottak av vedtak og søknader)
+  - Klagesaker og klage på vedtak
+  - Venteliste (saksbehandlers perspektiv)
+  - Tekstbank og malbibliotek for saksbehandling
+  - KI-støtte i saksbehandling (vedtakstekst-generering, automatisert søknadsvurdering)
+  - Masseutsendelse av vedtaksbrev
+  - Feilregistrering av sak/tjeneste
+  - Arkivering i saksbehandlingskontekst
 
 excludes:
   - Journal / sykepleiedokumentasjon           → Line (CPR)
   - Faktura selv om det kobles mot vedtak      → Jens (Back Office)
   - Meldinger ut av kommunen (e-melding, PLO)  → Hanne (Messaging)
+  - Altinn-integrasjon utover SvarInn/Ut       → Jens (Back Office)
+  - Rapporter/statistikk på vedtak (BI/uttrekk) → Jens (Back Office)
+  - Tilgangsstyring på tvers av team           → IAM-team
 
 tag_routes:
   - "team case handling"
@@ -34,6 +49,19 @@ keywords_strong:
   - tjenestetildeling
   - søknad
   - utredning
+  - saksoversikt
+  - godkjenningsflyt
+  - tvangsvedtak
+  - brevmal
+  - vedtaksmal
+  - venteliste
+  - feilregistrer
+  - SvarUt
+  - SvarInn
+  - klagesak
+  - tekstbank
+  - malbibliotek
+  - lavterskeltjeneste
 
 disambiguations:
   - term: revurdering
@@ -44,3 +72,21 @@ disambiguations:
     default_route: erik.story@aidn.no   # "AI/automation" når ingen sakskontekst
   - term: oppgaver
     route_here_when: [tjeneste, vedtak, saksbehandl]
+  - term: SvarInn
+    route_here_when: [vedtak, søknad, saksbehandl, tvangsvedtak]
+    default_route: hanne@aidn.no        # meldingsflyt uten sakskontekst → Messaging
+  - term: SvarUt
+    route_here_when: [vedtak, søknad, saksbehandl, tvangsvedtak]
+    default_route: hanne@aidn.no
+  - term: godkjenning
+    route_here_when: [vedtak, tvangsvedtak, saksbehandl]
+  - term: arkivering
+    route_here_when: [saksbehandl, vedtak]
+  - term: venteliste
+    route_here_when: [saksbehandl, vedtak, tildeling]
+
+hard_negatives:
+  - legenotat uten saksbehandlingskontekst     → Line (CPR)
+  - journalregistrering / sykepleiedokumentasjon → Line (CPR)
+  - statistikk / rapportuttrekk på vedtak      → Jens (Back Office)
+  - Altinn-integrasjon (generell)              → Jens (Back Office)

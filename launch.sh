@@ -41,16 +41,6 @@ setup() {
     set +o allexport
   fi
 
-  # Check tokens
-  if [ -z "${PB_TOKEN:-}" ] || [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-    echo ""
-    warn "Fill in $ROOT/.env and re-run:"
-    echo "  PB_TOKEN=pb_live_..."
-    echo "  ANTHROPIC_API_KEY=sk-ant-..."
-    echo ""
-    exit 0
-  fi
-
   # Python venv
   info "checking venv..."
   if [ ! -f "$VENV/bin/python" ]; then
@@ -132,13 +122,13 @@ fi
 
 # Open browser
 sleep 0.5
-open "http://127.0.0.1:$FRONTEND_PORT" 2>/dev/null || true
+open "http://localhost:$FRONTEND_PORT" 2>/dev/null || true
 
 echo ""
 echo -e "${GREEN}==========================================${RESET}"
-echo -e "  App:   http://127.0.0.1:$FRONTEND_PORT"
-echo -e "  API:   http://127.0.0.1:$BACKEND_PORT/docs"
-echo -e "  Logs:  tail -f data/backend.log"
+echo -e "  App:     http://localhost:$FRONTEND_PORT"
+echo -e "  Config:  http://localhost:$FRONTEND_PORT/config"
+echo -e "  API:     http://localhost:$BACKEND_PORT/docs"
 echo -e "${GREEN}==========================================${RESET}"
 echo ""
 echo "  Ctrl+C to stop"

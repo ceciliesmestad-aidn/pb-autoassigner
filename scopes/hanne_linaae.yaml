@@ -8,16 +8,26 @@ team: Team Messaging
 description_no: |
   Hanne eier meldingsintegrasjoner mellom kommunen og andre aktører:
   e-meldinger, PLO, sporbarhet, dialogmeldinger, henvisninger. Også
-  integrasjonsrammeverket for meldinger.
+  integrasjonsrammeverket for meldinger. I tillegg eier hun internmeldinger,
+  chat, beskjeder, varslinger og oppslagstavle/innlegg i Aidn.
 
 includes:
   - E-melding, dialogmelding, PLO
   - Henvisninger og svar
   - Sporbarhet i meldingsflyt
   - Integrasjon mot HelseID/NHN meldingstjenester
+  - Internmeldinger og gruppesamtaler (chat)
+  - Beskjeder (interne, pasienttilknyttede og frittstående)
+  - Varslinger (e-meldinger, internmeldinger, beskjeder)
+  - Oppslagstavle / innlegg og lesestatus
+  - Meldingsgrupper og tilgangsstyring for meldinger
+  - Labsvar-varsling via e-melding / EDI
+  - Autosvar på e-meldinger
+  - Integrasjoner: NHN Dødsmelding, MSIS, NAV elektronisk sykmelding, HP-link
+  - Automatisk registrering av sykehusopphold basert på e-meldinger
 
 excludes:
-  - VFT/VKP-integrasjoner  → holdes åpen / OpenAidn
+  - VFT/VKP-integrasjoner  → Fredrik (Team OpenAIdn)
   - Saksbehandlingsflyt som sender melding ut  → Kristin (Case Handling)
 
 tag_routes:
@@ -26,11 +36,36 @@ tag_routes:
 keywords_strong:
   - e-melding
   - emelding
+  - e-link
+  - elink
   - dialogmelding
   - plo
   - sporbarhet
   - henvisning
   - meldingsflyt
+  - internmelding
+  - meldingsgruppe
+  - gruppesamtale
+  - beskjed
+  - beskjedliste
+  - varsling
+  - varsel
+  - oppslagstavle
+  - innlegg
+  - lesestatus
+  - lest rapport
+  - autosvar
+  - labsvar
+  - EDI
+  - dødsmelding
+  - MSIS
+  - sykmelding
+  - HP-link
+  - sykehusopphold
+
+disambiguations:
+  - "varsel på avtaler → ikke Messaging (kalender/scheduling)"
+  - "labsvar-varsling i e-melding/EDI → Messaging; selve lab-registrering → annet team"
 
 hard_negatives:
-  - "vft", "vkp-integr"  # Disse holdes åpne (OpenAidn), ikke Messaging
+  - "vft", "vkp-integr"  # Tilhører Fredrik (Team OpenAIdn), ikke Messaging

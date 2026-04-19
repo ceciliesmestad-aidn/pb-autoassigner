@@ -32,4 +32,4 @@ disambiguations:
     default_route_here: true
     route_elsewhere_when:
       - [journal, kartlegging, pasient] → line.adde@aidn.no
-      - [tjeneste, vedtak, saksbehandl] → kristin.hoiaas@aidn.no
+      - [tjeneste, vedtak, saksbehandl] → kristin.shovick@aidn.no

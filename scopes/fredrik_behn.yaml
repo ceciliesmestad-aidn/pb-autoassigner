@@ -1,0 +1,58 @@
+# Scope: Fredrik Behn — Team OpenAIdn
+# Notes are in Norwegian (may contain English terms). Do not translate.
+
+pm_email: fredrik.behn@aidn.no
+pm_name: Fredrik Behn
+team: Team OpenAIdn
+
+description_no: |
+  Fredrik eier åpne integrasjoner og tredjeparts-koblinger i Aidn-plattformen.
+  Det vil si API-er og integrasjoner mot eksterne systemer som ikke er eid av
+  andre team: VFT, VKP, eksterne EPJ-systemer, webhooks, Open API-spesifikasjoner,
+  dataseksport til BI/analyse-verktøy, og generell plattformåpenhet.
+  Ekskluderer meldingsintegrasjoner (Hanne) og innlogging/IAM (Abraham).
+
+includes:
+  - VFT-integrasjon, VKP-integrasjon
+  - Åpent API / Open API / API-spesifikasjon
+  - Integrasjon mot eksterne EPJ-systemer (ikke DIPS-journal → Line)
+  - Webhooks ut av Aidn
+  - Datadeling, dataeksport til BI/analyse-verktøy
+  - Tredjepartsintegrasjoner (generelt, der annet team ikke er entydig eier)
+  - Plattformåpenhet, developer portal, SDK for eksterne
+
+excludes:
+  - E-melding, PLO, dialogmelding, HelseID-meldinger → Hanne (Messaging)
+  - Innlogging, SSO, HelseID-autentisering            → Abraham (IAM)
+  - Pasientjournal og EPJ-funksjonalitet              → Line (CPR)
+  - Faktura og økonomiintegrering                    → Jens (Back Office)
+  - Automatiseringsmotor (intern)                    → Erik (Patient)
+
+tag_routes:
+  - "team openaidn"
+  - "openaidn"
+
+keywords_strong:
+  - vft
+  - vkp
+  - open api
+  - openapi
+  - webhook
+  - tredjepart
+  - ekstern integrasjon
+  - datadeling
+  - dataeksport
+  - developer portal
+  - api-spesifikasjon
+  - integrasjonsplattform
+
+disambiguations:
+  - term: integrasjon
+    route_here_when: [vft, vkp, ekstern, tredjepart, webhook, open api, datadeling]
+    notes: >
+      "Integrasjon" alene er ikke nok. Det må være snakk om ekstern/tredjeparts-
+      integrasjon. Meldingsintegrasjoner (e-melding, PLO) → Hanne. IAM → Abraham.
+  - term: api
+    route_here_when: [ekstern, tredjepart, open, spesifikasjon, developer]
+    route_elsewhere_when:
+      - [innlogging, autentisering, sso] → abraham.guzman@aidn.no

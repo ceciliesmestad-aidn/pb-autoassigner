@@ -158,10 +158,15 @@ export const api = {
   runs: (limit = 50) =>
     fetch(`/api/runs?limit=${limit}`).then(json<{ runs: RunRow[] }>),
 
-  proposeTraining: () =>
-    fetch("/api/train/propose", { method: "POST" }).then(
+  proposeTraining: (opts?: { pm_email?: string; window_days?: number }) => {
+    const params = new URLSearchParams();
+    if (opts?.pm_email) params.set("pm_email", opts.pm_email);
+    if (opts?.window_days) params.set("window_days", String(opts.window_days));
+    const qs = params.size ? `?${params}` : "";
+    return fetch(`/api/train/propose${qs}`, { method: "POST" }).then(
       json<{ proposals: ScopeProposal[] }>,
-    ),
+    );
+  },
 
   applyTraining: (body: {
     pm_email: string;
@@ -174,6 +179,31 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).then(json<{ ok: boolean }>),
+
+  // ── setup / secrets ──────────────────────────────────────────────────────
+
+  setupStatus: () =>
+    fetch("/api/setup/status").then(
+      json<{
+        pb_token_set: boolean;
+        pb_token_preview: string;
+        anthropic_key_set: boolean;
+        anthropic_key_preview: string;
+        fully_configured: boolean;
+      }>,
+    ),
+
+  saveSecrets: (body: { pb_token?: string; anthropic_api_key?: string }) =>
+    fetch("/api/setup/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(json<{ ok: boolean }>),
+
+  testConnection: (service: "productboard" | "anthropic") =>
+    fetch(`/api/setup/test?service=${service}`, { method: "POST" }).then(
+      json<{ ok: boolean; error?: string }>,
+    ),
 };
 
 export function parseTags(tagsJson: string | null | undefined): string[] {

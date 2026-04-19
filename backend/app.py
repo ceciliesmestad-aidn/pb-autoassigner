@@ -130,6 +130,11 @@ class ProposeResponse(BaseModel):
     proposals: list[dict]
 
 
+class SaveSecretsRequest(BaseModel):
+    pb_token: str = ""
+    anthropic_api_key: str = ""
+
+
 # ─── api registration ─────────────────────────────────────────────────────────
 
 def _register_api(app: FastAPI) -> None:
@@ -163,6 +168,79 @@ def _register_api(app: FastAPI) -> None:
             "model_default": cfg.anthropic.model_default,
             "model_escalate": cfg.anthropic.model_escalate,
         }
+
+    # ── setup / secrets ───────────────────────────────────────────────────────
+
+    @app.get("/api/setup/status")
+    def setup_status():
+        """Returns which secrets are configured (masked). Never returns the full value."""
+        cfg: Config = app.state.cfg
+
+        def _mask(s: str) -> str:
+            if not s:
+                return ""
+            if len(s) <= 10:
+                return "•" * len(s)
+            return s[:5] + "…" + s[-4:]
+
+        pb = cfg.productboard.token
+        anth = cfg.anthropic.api_key
+        return {
+            "pb_token_set": bool(pb),
+            "pb_token_preview": _mask(pb),
+            "anthropic_key_set": bool(anth),
+            "anthropic_key_preview": _mask(anth),
+            "fully_configured": bool(pb) and bool(anth),
+        }
+
+    @app.post("/api/setup/save")
+    def save_secrets(body: SaveSecretsRequest):
+        """Write PB token / Anthropic key to config.toml and hot-reload in-process."""
+        from .config import patch_config_toml
+        patches: dict[tuple[str, str], str] = {}
+        if body.pb_token.strip():
+            patches[("productboard", "token")] = body.pb_token.strip()
+        if body.anthropic_api_key.strip():
+            patches[("anthropic", "api_key")] = body.anthropic_api_key.strip()
+
+        if patches:
+            patch_config_toml(patches)
+            app.state.cfg = load_config()   # hot-reload so the running process uses new keys
+            log.info("setup: secrets updated and config reloaded")
+
+        return {"ok": True}
+
+    @app.post("/api/setup/test")
+    def test_connection(service: str = Query(..., pattern="^(productboard|anthropic)$")):
+        """Probe PB or Anthropic with the current credentials."""
+        cfg: Config = app.state.cfg
+        if service == "productboard":
+            if not cfg.productboard.token:
+                return {"ok": False, "error": "PB token not set"}
+            try:
+                client = pb_client.PBClient(
+                    token=cfg.productboard.token,
+                    ssl_verify=cfg.productboard.ssl_verify,
+                    patch_delay_seconds=cfg.productboard.patch_delay_seconds,
+                )
+                client._request("GET", "/notes", params={"pageLimit": 1})
+                return {"ok": True}
+            except Exception as e:
+                return {"ok": False, "error": str(e)[:300]}
+        else:  # anthropic
+            if not cfg.anthropic.api_key:
+                return {"ok": False, "error": "Anthropic key not set"}
+            try:
+                from . import classify as classify_mod
+                ac = classify_mod.build_anthropic_client(cfg.anthropic)
+                ac.messages.create(
+                    model=cfg.anthropic.model_default,
+                    max_tokens=1,
+                    messages=[{"role": "user", "content": "hi"}],
+                )
+                return {"ok": True}
+            except Exception as e:
+                return {"ok": False, "error": str(e)[:300]}
 
     @app.get("/api/pms")
     def list_pms():
@@ -351,11 +429,17 @@ def _register_api(app: FastAPI) -> None:
         }
 
     @app.post("/api/train/propose", response_model=ProposeResponse)
-    def propose_training():
+    def propose_training(
+        pm_email: str | None = Query(None, description="Limit to a single PM email"),
+        window_days: int | None = Query(None, ge=7, le=365, description="Override window (days)"),
+    ):
         cfg: Config = app.state.cfg
+        pm_emails = [pm_email] if pm_email else None
         with _conn() as conn:
             proposals = train.propose_scope_updates(
-                conn, cfg.anthropic, cfg.training, cfg.scopes_dir, pb=_pb()
+                conn, cfg.anthropic, cfg.training, cfg.scopes_dir, pb=_pb(),
+                pm_emails=pm_emails,
+                window_days=window_days,
             )
         return {"proposals": [p.__dict__ for p in proposals]}
 

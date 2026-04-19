@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -80,17 +81,14 @@ def load_config(path: Path | str | None = None) -> Config:
 
     Environment overrides:
       PB_TOKEN, ANTHROPIC_API_KEY, PB_ASSIGNER_DB_PATH
+
+    If config.toml is missing the app starts with empty tokens; the Config tab
+    handles first-time key entry and writes the file.
     """
     path = Path(path) if path else DEFAULT_CONFIG_PATH
     raw: dict = {}
     if path.exists():
         raw = tomllib.loads(path.read_text())
-    elif not os.environ.get("PB_TOKEN") and not os.environ.get("ANTHROPIC_API_KEY"):
-        # No config file and no env vars — tell the user.
-        raise FileNotFoundError(
-            f"{path} not found. Copy {EXAMPLE_CONFIG_PATH.name} to config.toml and fill in, "
-            f"or set PB_TOKEN and ANTHROPIC_API_KEY env vars."
-        )
 
     cfg = Config(
         productboard=ProductboardConfig(**(raw.get("productboard") or {})),
@@ -110,3 +108,39 @@ def load_config(path: Path | str | None = None) -> Config:
         cfg.storage.db_path = env_db
 
     return cfg
+
+
+def patch_config_toml(patches: dict[tuple[str, str], str], path: Path | None = None) -> None:
+    """Update specific key = "value" lines in config.toml without destroying comments.
+
+    patches = {("section", "key"): "new_value"}
+
+    If config.toml doesn't exist it is created from config.example.toml first.
+    Only string values (quoted in TOML) are supported — enough for tokens/keys.
+    """
+    target = path or DEFAULT_CONFIG_PATH
+    if not target.exists():
+        src = EXAMPLE_CONFIG_PATH if EXAMPLE_CONFIG_PATH.exists() else None
+        target.write_text(src.read_text(encoding="utf-8") if src else "", encoding="utf-8")
+
+    lines = target.read_text(encoding="utf-8").splitlines(keepends=True)
+    current_section: str | None = None
+    remaining = dict(patches)
+    result: list[str] = []
+
+    for line in lines:
+        section_m = re.match(r'^\s*\[([^\]]+)\]', line)
+        if section_m:
+            current_section = section_m.group(1).strip()
+
+        if current_section:
+            key_m = re.match(r'^(\s*)(\w+)(\s*=\s*)"[^"]*"', line)
+            if key_m:
+                key = key_m.group(2)
+                if (current_section, key) in remaining:
+                    new_val = remaining.pop((current_section, key))
+                    line = f'{key_m.group(1)}{key}{key_m.group(3)}"{new_val}"\n'
+
+        result.append(line)
+
+    target.write_text("".join(result), encoding="utf-8")

@@ -28,6 +28,7 @@ export default function Console() {
     queryKey: ["runs"],
     queryFn: () => api.runs(30),
     refetchInterval: 5000,
+    refetchIntervalInBackground: false,
   });
 
   const endRef = useRef<HTMLDivElement | null>(null);
