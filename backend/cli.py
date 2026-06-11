@@ -18,7 +18,7 @@ import logging
 import sys
 from pathlib import Path
 
-from . import db, owners, pb_client, pipeline, scopes_loader, train
+from . import db, notify, owners, pb_client, pipeline, scopes_loader, train
 from .config import PROJECT_ROOT, load_config
 
 
@@ -32,7 +32,18 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("init-db")
     sub.add_parser("ingest")
     sub.add_parser("classify")
-    sub.add_parser("run")
+    p_run = sub.add_parser("run")
+    p_run.add_argument(
+        "--dry-run", action="store_true",
+        help="Run autopilot in dry-run mode: log what WOULD have been "
+             "auto-assigned and record audit rows, but do not PATCH PB. "
+             "Use during the manual→autopilot ramp.",
+    )
+    p_run.add_argument(
+        "--no-autopilot", action="store_true",
+        help="Force autopilot off for this run regardless of config.toml. "
+             "Useful for one-off ingest+classify when troubleshooting.",
+    )
     sub.add_parser("status")
     sub.add_parser("verify-map")
 
@@ -84,10 +95,52 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "run":
         client = _pb_or_die(cfg)
-        with db.connect(cfg.db_path) as conn:
-            ingest_stats = pipeline.ingest(conn, client)
-            classify_stats = pipeline.classify_pending(conn, cfg)
-        print(json.dumps({"ingest": ingest_stats, "classify": classify_stats}, indent=2))
+        try:
+            with db.connect(cfg.db_path) as conn:
+                ingest_stats = pipeline.ingest(conn, client)
+                classify_stats = pipeline.classify_pending(conn, cfg)
+
+                # Autopilot — auto-PATCH high-confidence suggestions when enabled.
+                # `--no-autopilot` forces it off for this run; `--dry-run` forces
+                # dry-run regardless of config. Otherwise the config flag
+                # `autopilot_dry_run` decides — that way the UI can flip dry-run↔live
+                # without editing the launchd plist. Both flags are inert when
+                # autopilot_enabled = false in config.
+                autopilot_stats: dict | None = None
+                if cfg.classifier.autopilot_enabled and not args.no_autopilot:
+                    effective_dry_run = args.dry_run or cfg.classifier.autopilot_dry_run
+                    autopilot_stats = pipeline.auto_assign_high_confidence(
+                        conn, client, cfg, dry_run=effective_dry_run,
+                    )
+                else:
+                    autopilot_stats = {"skipped": "autopilot disabled"}
+
+                # Whatever is still 'suggested' after autopilot could not be
+                # auto-assigned (below threshold, leave-open, or capped) —
+                # these go into the Slack alert section.
+                needs_review = db.list_suggestions_with_notes(
+                    conn, states=("suggested",), limit=200,
+                )
+        except Exception as e:
+            # The run crashed — make sure Slack hears about it, then re-raise
+            # so launchd / GitHub Actions also see a non-zero exit.
+            notify.send_failure(cfg, f"{type(e).__name__}: {e}")
+            raise
+
+        notify.send_run_report(
+            cfg,
+            ingest_stats=ingest_stats,
+            classify_stats=classify_stats,
+            autopilot_stats=autopilot_stats,
+            needs_review=needs_review,
+        )
+
+        print(json.dumps({
+            "ingest": ingest_stats,
+            "classify": classify_stats,
+            "autopilot": autopilot_stats,
+            "needs_review": len(needs_review),
+        }, indent=2))
         return 0
 
     if args.cmd == "status":
@@ -140,6 +193,7 @@ def _pb_or_die(cfg) -> pb_client.PBClient:
         token=cfg.productboard.token,
         ssl_verify=cfg.productboard.ssl_verify,
         patch_delay_seconds=cfg.productboard.patch_delay_seconds,
+        api_version=cfg.productboard.api_version,
     )
 
 

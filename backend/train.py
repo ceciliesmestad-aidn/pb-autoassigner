@@ -235,7 +235,8 @@ def _fetch_pb_notes_for_pm(pb, pm_email: str, since_iso: str) -> list[dict]:
     try:
         notes = []
         for raw in pb.list_notes(owner_email=pm_email):
-            created = raw.get("created_at") or ""
+            # PB API v1 uses camelCase; accept both spellings.
+            created = raw.get("createdAt") or raw.get("created_at") or ""
             if created and created < since_iso:
                 continue  # PB returns newest-first; once we're past the window, skip
             flat = pb_mod.flatten_note(raw)

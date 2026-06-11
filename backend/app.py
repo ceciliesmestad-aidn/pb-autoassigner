@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import db, owners, pb_client, pipeline, scopes_loader, train
+from . import db, insights as insights_mod, owners, pb_client, pipeline, scopes_loader, train
 from .config import PROJECT_ROOT, Config, load_config
 
 log = logging.getLogger(__name__)
@@ -152,6 +152,7 @@ def _register_api(app: FastAPI) -> None:
             token=pb.token,
             ssl_verify=pb.ssl_verify,
             patch_delay_seconds=pb.patch_delay_seconds,
+            api_version=pb.api_version,
         )
 
     @app.get("/api/health")
@@ -164,10 +165,56 @@ def _register_api(app: FastAPI) -> None:
         return {
             "needs_attention_below": cfg.classifier.needs_attention_below,
             "autopilot_min_confidence": cfg.classifier.autopilot_min_confidence,
-            "autopilot_enabled": False,  # deferred until server deployment
+            "autopilot_enabled": cfg.classifier.autopilot_enabled,
+            "autopilot_dry_run": cfg.classifier.autopilot_dry_run,
+            "autopilot_per_pm_cap": cfg.classifier.autopilot_per_pm_cap,
+            "autopilot_total_cap": cfg.classifier.autopilot_total_cap,
             "model_default": cfg.anthropic.model_default,
             "model_escalate": cfg.anthropic.model_escalate,
         }
+
+    @app.post("/api/setup/set-autopilot")
+    def set_autopilot(enabled: bool = Query(..., description="true to enable, false to disable")):
+        """Flip autopilot_enabled in config.toml without restarting.
+
+        Used by the Mode toggle in the UI. The next launchd run picks up the
+        new value automatically (config.toml is read at process start). The
+        running backend reloads so /api/config returns the new value too.
+        """
+        from .config import patch_config_toml
+        patch_config_toml({("classifier", "autopilot_enabled"): "true" if enabled else "false"})
+        app.state.cfg = load_config()
+        log.info("autopilot: master switch flipped to %s via UI", enabled)
+        return {"ok": True, "autopilot_enabled": enabled}
+
+    @app.post("/api/setup/set-autopilot-dry-run")
+    def set_autopilot_dry_run(enabled: bool = Query(..., description="true = dry-run (safe), false = live PATCHes")):
+        """Flip autopilot_dry_run in config.toml without restarting.
+
+        Powers the "Dry-run / Live" toggle in the UI. When dry-run is on,
+        every autopilot decision is logged to the audit table with a
+        [DRY-RUN] marker but no PATCH hits Productboard. Flip to false
+        when you've watched the dry-run audit for a few runs and trust
+        the suggestions.
+        """
+        from .config import patch_config_toml
+        patch_config_toml({("classifier", "autopilot_dry_run"): "true" if enabled else "false"})
+        app.state.cfg = load_config()
+        log.info("autopilot: dry-run flipped to %s via UI", enabled)
+        return {"ok": True, "autopilot_dry_run": enabled}
+
+    @app.get("/api/recent-autopilot")
+    def recent_autopilot(hours: int = Query(24, ge=1, le=720)):
+        """Last N hours of autopilot decisions, joined with note context.
+
+        Drives the Recent Autopilot tab. Includes both real PATCHes and
+        dry-run rows (distinguishable by pb_status / pb_error). Each row
+        includes the suggestion's reasoning so a one-click override decision
+        doesn't need a second round-trip.
+        """
+        with db.connect(app.state.cfg.db_path) as conn:
+            rows = db.recent_autopilot_assignments(conn, hours=hours)
+        return {"hours": hours, "count": len(rows), "items": rows}
 
     # ── setup / secrets ───────────────────────────────────────────────────────
 
@@ -222,6 +269,7 @@ def _register_api(app: FastAPI) -> None:
                     token=cfg.productboard.token,
                     ssl_verify=cfg.productboard.ssl_verify,
                     patch_delay_seconds=cfg.productboard.patch_delay_seconds,
+                    api_version=cfg.productboard.api_version,
                 )
                 client._request("GET", "/notes", params={"pageLimit": 1})
                 return {"ok": True}
@@ -345,10 +393,19 @@ def _register_api(app: FastAPI) -> None:
 
     @app.post("/api/run")
     def post_run():
+        """Trigger ingest → classify → (optional) autopilot.
+
+        Mirrors what the daily launchd job does, so clicking "Fetch notes" in
+        the UI gives the same end-state as the scheduled run. Autopilot fires
+        only when cfg.classifier.autopilot_enabled is true, and respects the
+        cfg.classifier.autopilot_dry_run safety harness so the UI can flip
+        dry-run↔live from the Mode card without editing config files.
+        """
         cfg: Config = app.state.cfg
+        client = _pb()
         with _conn() as conn:
             try:
-                ingest_stats = pipeline.ingest(conn, _pb())
+                ingest_stats = pipeline.ingest(conn, client)
             except Exception as e:
                 log.exception("run: ingest failed")
                 raise HTTPException(502, f"ingest failed ({type(e).__name__}): {e}")
@@ -361,13 +418,55 @@ def _register_api(app: FastAPI) -> None:
                     f"classify failed ({type(e).__name__}): {e}. "
                     "Check the Console tab for details.",
                 )
-        return {"ingest": ingest_stats, "classify": classify_stats}
+
+            autopilot_stats: dict
+            if cfg.classifier.autopilot_enabled:
+                try:
+                    autopilot_stats = pipeline.auto_assign_high_confidence(
+                        conn, client, cfg,
+                        dry_run=cfg.classifier.autopilot_dry_run,
+                    )
+                except Exception as e:
+                    log.exception("run: autopilot failed")
+                    # Don't 502 the whole run — ingest + classify already
+                    # succeeded and those results are usable. Surface the
+                    # autopilot error in the response payload instead.
+                    autopilot_stats = {"error": f"{type(e).__name__}: {e}"}
+            else:
+                autopilot_stats = {"skipped": "autopilot disabled"}
+
+        return {
+            "ingest": ingest_stats,
+            "classify": classify_stats,
+            "autopilot": autopilot_stats,
+        }
 
     @app.get("/api/dashboard")
     def dashboard():
         with _conn() as conn:
             stats = db.dashboard_stats(conn)
         return stats
+
+    @app.post("/api/insights")
+    def compute_insights_endpoint(
+        pm_email: str = Query(..., description="PM email"),
+        window_days: int = Query(30, ge=1, le=365),
+    ):
+        cfg: Config = app.state.cfg
+        # Validate PM
+        if not any(p.email.lower() == pm_email.lower() for p in owners.get_all()):
+            raise HTTPException(404, f"unknown PM: {pm_email}")
+        try:
+            result = insights_mod.compute_insights(
+                pm_email=pm_email,
+                window_days=window_days,
+                pb=_pb(),
+                cfg_anthropic=cfg.anthropic,
+            )
+        except Exception as e:
+            log.exception("insights: compute failed")
+            raise HTTPException(502, f"insights failed ({type(e).__name__}): {e}")
+        return result.__dict__
 
     @app.get("/api/scopes")
     def list_scopes():

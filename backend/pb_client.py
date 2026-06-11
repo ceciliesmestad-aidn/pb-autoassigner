@@ -1,20 +1,36 @@
 """Productboard API client.
 
-Ported from v1 `pb_fetcher.py` with additions:
-- PATCH assign wrapped as a first-class method
-- Owner-map verification helper
-- Uses stdlib urllib to avoid extra deps; SSL verification is controlled by config
-  (default off, matching v1's corporate-proxy workaround)
+Speaks either v1 or v2 of PB's REST API, selected via the `api_version`
+attribute. v1 is the historical default; v2 is the migration target.
+v1 sunset date: 2026-07-08 (see docs/v2_migration_plan.md).
 
 PB API reference (as of April 2026):
-  Base:       https://api.productboard.com
-  Auth:       Authorization: Bearer <token>, X-Version: 1
-  List notes: GET  /notes?pageLimit=2000&pageCursor=...&ownerEmail=...
-              Response: {data: [...], pageCursor: "...", totalResults: N}
-              Cursor-based pagination, 1-minute cursor expiry, max 2000 per page.
-  Assign:     PATCH /notes/{uuid}   body: {data: {owner: {email: "..."}}}
-              Returns 201 on success (not 200/204).
-  Rate limit: 50 req/s.
+
+v1:
+  Base:        https://api.productboard.com
+  Auth:        Authorization: Bearer <token>, X-Version: 1
+  List notes:  GET  /notes?pageLimit=2000&pageCursor=...&ownerEmail=...
+               Response envelope: {data: [...], pageCursor: "...", totalResults: N}
+  Assign:      PATCH /notes/{uuid}   body: {data: {owner: {email: "..."}}}
+               Returns 201 on success (quirky — not 200/204).
+  Note shape:  {id, title, content, tags, company.name, source.system,
+                displayUrl, createdAt, owner}
+
+v2:
+  Base:        https://api.productboard.com/v2
+  Auth:        Authorization: Bearer <token>   (no X-Version header)
+  List notes:  GET  /v2/notes?pageLimit=100&owner[email]=...&fields=all
+               Response envelope: {data: [...], links: {next: "<full URL>"}}
+               Pagination: follow links.next URL as-is until null.
+               Filtering by owner[email] requires `members:pii:read` scope.
+  Assign:      PATCH /v2/notes/{id}   body: {fields: {owner: {email: "..."}}}
+  Note shape:  {id, type, createdAt, updatedAt,
+                fields: {name, content, tags[], owner, creator, archived, processed},
+                links: {self},
+                relationships: {data: [...], links: {next}},
+                metadata: {source: {system, recordId}}}
+
+Both versions use the same rate limit (50 req/s) and the same Bearer token.
 """
 from __future__ import annotations
 
@@ -34,8 +50,9 @@ from typing import Iterator
 log = logging.getLogger(__name__)
 
 PB_API = "https://api.productboard.com"
-PAGE_LIMIT = 2000
-PAGINATION_DELAY = 0.2  # seconds between paginated GETs
+V1_PAGE_LIMIT = 2000       # v1 accepted large page sizes; kept for backwards compat
+V2_PAGE_LIMIT = 100        # v2 docs note 100 is the documented default; stay conservative
+PAGINATION_DELAY = 0.2     # seconds between paginated GETs
 
 
 @dataclass
@@ -44,6 +61,13 @@ class PBClient:
     ssl_verify: bool = False
     patch_delay_seconds: float = 0.3
     timeout_seconds: int = 30
+    api_version: str = "v1"  # "v1" or "v2"
+
+    def __post_init__(self) -> None:
+        if self.api_version not in ("v1", "v2"):
+            raise ValueError(f"unsupported api_version: {self.api_version!r} (expected 'v1' or 'v2')")
+
+    # ─── internals ────────────────────────────────────────────────────────────
 
     def _ssl_context(self) -> ssl.SSLContext:
         ctx = ssl.create_default_context()
@@ -53,19 +77,21 @@ class PBClient:
         return ctx
 
     def _headers(self) -> dict[str, str]:
-        return {
+        h = {
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
-            "X-Version": "1",
         }
+        if self.api_version == "v1":
+            h["X-Version"] = "1"
+        return h
 
-    # ─── low-level ────────────────────────────────────────────────────────────
+    def _notes_path(self) -> str:
+        """Path prefix for the notes collection — differs per API version."""
+        return "/v2/notes" if self.api_version == "v2" else "/notes"
 
-    def _request(self, method: str, path: str, *, params: dict | None = None,
-                 body: dict | None = None) -> tuple[int, dict | None]:
-        url = PB_API + path
-        if params:
-            url += "?" + urllib.parse.urlencode(params)
+    def _request_url(self, method: str, url: str, *, body: dict | None = None) -> tuple[int, dict | None]:
+        """Fire a request at an absolute URL. Used for v2 pagination where the
+        next-page URL is returned in `links.next` and should be followed as-is."""
         data = json.dumps(body).encode() if body is not None else None
         req = urllib.request.Request(url, data=data, method=method, headers=self._headers())
         try:
@@ -78,6 +104,13 @@ class PBClient:
             err_body = e.read().decode("utf-8", errors="replace")
             raise PBError(e.code, err_body, url=url) from e
 
+    def _request(self, method: str, path: str, *, params: dict | None = None,
+                 body: dict | None = None) -> tuple[int, dict | None]:
+        url = PB_API + path
+        if params:
+            url += "?" + urllib.parse.urlencode(params)
+        return self._request_url(method, url, body=body)
+
     # ─── high-level ───────────────────────────────────────────────────────────
 
     def list_notes(self, *, owner_email: str | None = None) -> Iterator[dict]:
@@ -86,7 +119,13 @@ class PBClient:
         `owner_email` filters to a specific assignee. Omit to fetch all notes.
         (PB has no native 'unassigned' filter — use fetch_unassigned() for that.)
         """
-        params: dict[str, str | int] = {"pageLimit": PAGE_LIMIT}
+        if self.api_version == "v2":
+            yield from self._list_notes_v2(owner_email=owner_email)
+        else:
+            yield from self._list_notes_v1(owner_email=owner_email)
+
+    def _list_notes_v1(self, *, owner_email: str | None) -> Iterator[dict]:
+        params: dict[str, str | int] = {"pageLimit": V1_PAGE_LIMIT}
         if owner_email:
             params["ownerEmail"] = owner_email
 
@@ -108,21 +147,61 @@ class PBClient:
             params["pageCursor"] = cursor
             time.sleep(PAGINATION_DELAY)
 
+    def _list_notes_v2(self, *, owner_email: str | None) -> Iterator[dict]:
+        # v2 uses bracket-notation query params and link-following pagination.
+        # We pass fields=all so null fields (e.g. owner on unassigned notes) are
+        # present with an explicit null — that lets fetch_unassigned() detect them.
+        params: dict[str, str | int] = {
+            "pageLimit": V2_PAGE_LIMIT,
+            "fields": "all",
+        }
+        if owner_email:
+            params["owner[email]"] = owner_email
+
+        url = PB_API + "/v2/notes?" + urllib.parse.urlencode(params)
+        total_fetched = 0
+        while True:
+            status, payload = self._request_url("GET", url)
+            if payload is None:
+                break
+            batch = payload.get("data", []) or []
+            total_fetched += len(batch)
+            for n in batch:
+                yield n
+
+            next_url = ((payload.get("links") or {}).get("next")) or None
+            if not next_url:
+                break
+            log.info("fetched %d notes, continuing…", total_fetched)
+            url = next_url
+            time.sleep(PAGINATION_DELAY)
+
     def fetch_unassigned(self) -> list[dict]:
         """Return every note in the workspace with no owner.
 
-        PB API has no server-side unassigned filter; we filter client-side.
+        Neither v1 nor v2 has a server-side unassigned filter for notes — we
+        filter client-side on the owner field, which differs per version.
         """
-        all_notes = list(self.list_notes())
-        return [n for n in all_notes if not n.get("owner")]
+        if self.api_version == "v2":
+            # v2: fields.owner is either a dict or null
+            return [n for n in self.list_notes()
+                    if not (n.get("fields") or {}).get("owner")]
+        # v1: owner is top-level
+        return [n for n in self.list_notes() if not n.get("owner")]
 
     def assign(self, note_uuid: str, owner_email: str) -> int:
-        """PATCH a note to set its owner. Returns HTTP status (201 on success)."""
-        status, _ = self._request(
-            "PATCH",
-            f"/notes/{note_uuid}",
-            body={"data": {"owner": {"email": owner_email}}},
-        )
+        """PATCH a note to set its owner. Returns HTTP status."""
+        if self.api_version == "v2":
+            # v2 supports two PATCH styles; we use the `fields` form — simpler,
+            # parallels v1's `data`-wrapped body. Alternative is patch-op style:
+            #   {"patch": [{"op": "set", "field": "owner", "value": {"email": ...}}]}
+            body = {"fields": {"owner": {"email": owner_email}}}
+            path = f"/v2/notes/{note_uuid}"
+        else:
+            body = {"data": {"owner": {"email": owner_email}}}
+            path = f"/notes/{note_uuid}"
+
+        status, _ = self._request("PATCH", path, body=body)
         time.sleep(self.patch_delay_seconds)
         return status
 
@@ -149,30 +228,96 @@ def strip_html(text: str) -> str:
 
 
 def flatten_note(raw: dict) -> dict:
-    """Convert the PB note JSON into the shape db.upsert_note() expects."""
+    """Convert a PB note JSON into the flat shape db.upsert_note() expects.
+
+    Auto-detects v1 vs v2 by looking for the v2-specific `fields` envelope.
+    Both versions produce the same output dict shape so downstream code
+    (pipeline, insights, train) doesn't need to care which API emitted the raw.
+    """
+    if isinstance(raw.get("fields"), dict):
+        return _flatten_v2(raw)
+    return _flatten_v1(raw)
+
+
+def _flatten_v1(raw: dict) -> dict:
     title = raw.get("title") or ""
     content_raw = raw.get("content") or ""
     content_clean = strip_html(content_raw)
 
-    tags = []
-    for t in raw.get("tags") or []:
-        if isinstance(t, str):
-            tags.append(t)
-        elif isinstance(t, dict):
-            tags.append(t.get("name") or "")
-    tags = [t for t in tags if t]
+    tags = _normalize_tags(raw.get("tags") or [])
 
     company = ((raw.get("company") or {}).get("name")) or ""
     source = ((raw.get("source") or {}).get("system")) or ""
-    display_url = raw.get("display_url") or ""
-    pb_created_at = raw.get("created_at") or ""
+    # PB API v1 uses camelCase; accept both spellings for robustness.
+    display_url = raw.get("displayUrl") or raw.get("display_url") or ""
+    pb_created_at = raw.get("createdAt") or raw.get("created_at") or ""
 
+    return _assemble_flat(
+        pb_uuid=raw.get("id") or "",
+        title=title,
+        content_clean=content_clean,
+        tags=tags,
+        company=company,
+        source=source,
+        display_url=display_url,
+        pb_created_at=pb_created_at,
+        raw=raw,
+    )
+
+
+def _flatten_v2(raw: dict) -> dict:
+    fields = raw.get("fields") or {}
+    links = raw.get("links") or {}
+    metadata = raw.get("metadata") or {}
+    # NOTE: v2 keeps the customer/company inside `relationships` as a reference
+    # (id + type + self-link) rather than embedding the name. Resolving a name
+    # from that reference needs a second call per unique customer — tracked as
+    # a follow-up. For now we leave `company` empty; the Insights top-muni
+    # chart will degrade gracefully (empty list) until the resolver lands.
+
+    title = fields.get("name") or ""
+    content_raw = fields.get("content") or ""
+    content_clean = strip_html(content_raw)
+
+    tags = _normalize_tags(fields.get("tags") or [])
+
+    company = ""  # TODO(v2): resolve from relationships.data[].target.id
+    source = ((metadata.get("source") or {}).get("system")) or ""
+    display_url = links.get("self") or ""
+    pb_created_at = raw.get("createdAt") or ""
+
+    return _assemble_flat(
+        pb_uuid=raw.get("id") or "",
+        title=title,
+        content_clean=content_clean,
+        tags=tags,
+        company=company,
+        source=source,
+        display_url=display_url,
+        pb_created_at=pb_created_at,
+        raw=raw,
+    )
+
+
+def _normalize_tags(tags_raw: list) -> list[str]:
+    """Both v1 and v2 accept array of strings or array of {name: ...} dicts."""
+    out: list[str] = []
+    for t in tags_raw:
+        if isinstance(t, str):
+            out.append(t)
+        elif isinstance(t, dict):
+            out.append(t.get("name") or "")
+    return [t for t in out if t]
+
+
+def _assemble_flat(*, pb_uuid: str, title: str, content_clean: str,
+                   tags: list[str], company: str, source: str,
+                   display_url: str, pb_created_at: str, raw: dict) -> dict:
     content_hash = hashlib.sha256(
         f"{title}\n---\n{content_clean}".encode("utf-8")
     ).hexdigest()
-
     return {
-        "pb_uuid": raw.get("id") or "",
+        "pb_uuid": pb_uuid,
         "content_hash": content_hash,
         "title": title,
         "content": content_clean,

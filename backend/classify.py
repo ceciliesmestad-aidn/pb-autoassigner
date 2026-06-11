@@ -29,21 +29,31 @@ from .scopes_loader import LoadedScopes
 log = logging.getLogger(__name__)
 
 
-def build_anthropic_client(cfg: AnthropicConfig) -> anthropic.Anthropic:
+def build_anthropic_client(
+    cfg: AnthropicConfig,
+    timeout_seconds: float | None = None,
+) -> anthropic.Anthropic:
     """Build an Anthropic SDK client that respects corporate-proxy SSL settings.
 
     When `ssl_verify=False` we hand the SDK a pre-configured httpx client so the
     SDK's internal client doesn't trip on intercepted TLS (Zscaler/Netskope).
     Mirrors the PB client's `ssl_verify=false` escape hatch.
+
+    Pass `timeout_seconds` to override the configured default — useful for
+    long-running calls like insights that can legitimately take 2–3 minutes.
     """
     if not cfg.api_key:
         raise ValueError(
             "Anthropic API key missing. Set [anthropic].api_key or ANTHROPIC_API_KEY."
         )
+    effective_timeout = timeout_seconds if timeout_seconds is not None else cfg.timeout_seconds
     kwargs: dict[str, Any] = {"api_key": cfg.api_key}
     if not cfg.ssl_verify:
         log.info("anthropic: TLS verification disabled (corporate proxy mode)")
-        kwargs["http_client"] = httpx.Client(verify=False, timeout=cfg.timeout_seconds)
+        kwargs["http_client"] = httpx.Client(verify=False, timeout=effective_timeout)
+    else:
+        # Even when not in proxy mode, enforce the timeout via the SDK's own setting.
+        kwargs["timeout"] = effective_timeout
     return anthropic.Anthropic(**kwargs)
 
 

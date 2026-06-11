@@ -34,8 +34,37 @@ export type AppConfig = {
   needs_attention_below: number;
   autopilot_min_confidence: number;
   autopilot_enabled: boolean;
+  autopilot_per_pm_cap: number;
+  autopilot_total_cap: number;
   model_default: string;
   model_escalate: string;
+};
+
+export type AutopilotRow = {
+  assignment_id: number;
+  note_id: number;
+  pm_email: string;
+  confidence: number | null;
+  assigned_at: string;
+  pb_status: number | null;
+  pb_error: string | null;
+  pb_uuid: string;
+  title: string;
+  display_url: string;
+  company: string;
+  note_state: string;
+  reasoning: string | null;
+};
+
+export type InsightsResult = {
+  pm_email: string;
+  window_days: number;
+  total_notes: number;
+  notes_by_category: Record<string, number>;
+  notes_by_municipality: { name: string; n: number }[];
+  frequency: { bucket: string; n: number }[];
+  summary_no: string;
+  model: string;
 };
 
 export type DashboardStats = {
@@ -124,6 +153,16 @@ export const api = {
 
   dashboard: () => fetch("/api/dashboard").then(json<DashboardStats>),
 
+  insights: (params: { pm_email: string; window_days: number }) => {
+    const qs = new URLSearchParams({
+      pm_email: params.pm_email,
+      window_days: String(params.window_days),
+    });
+    return fetch(`/api/insights?${qs}`, { method: "POST" }).then(
+      json<InsightsResult>,
+    );
+  },
+
   scopesList: () =>
     fetch("/api/scopes").then(
       json<{ combined_hash: string; pm_emails: string[] }>,
@@ -203,6 +242,18 @@ export const api = {
   testConnection: (service: "productboard" | "anthropic") =>
     fetch(`/api/setup/test?service=${service}`, { method: "POST" }).then(
       json<{ ok: boolean; error?: string }>,
+    ),
+
+  // ── autopilot ────────────────────────────────────────────────────────────
+
+  setAutopilot: (enabled: boolean) =>
+    fetch(`/api/setup/set-autopilot?enabled=${enabled}`, { method: "POST" }).then(
+      json<{ ok: boolean; autopilot_enabled: boolean }>,
+    ),
+
+  recentAutopilot: (hours = 24) =>
+    fetch(`/api/recent-autopilot?hours=${hours}`).then(
+      json<{ hours: number; count: number; items: AutopilotRow[] }>,
     ),
 };
 

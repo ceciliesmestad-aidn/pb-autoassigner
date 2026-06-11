@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  launchd job: runs `pb-assigner run` daily at 07:00 local time.
+  launchd job: runs `pb-assigner run` daily at 09:00 local time.
 
-  Install:
+  Install (one-time):
     cp launchd/com.aidn.pb-assigner.plist ~/Library/LaunchAgents/
     launchctl load ~/Library/LaunchAgents/com.aidn.pb-assigner.plist
 
-  Edit the absolute paths below to match your machine before loading.
+  Reinstall after editing:
+    launchctl unload ~/Library/LaunchAgents/com.aidn.pb-assigner.plist
+    cp launchd/com.aidn.pb-assigner.plist ~/Library/LaunchAgents/
+    launchctl load   ~/Library/LaunchAgents/com.aidn.pb-assigner.plist
+
+  Trigger manually (without waiting for 09:00):
+    launchctl start com.aidn.pb-assigner
+
+  Logs:
+    tail -f ~/Library/Logs/pb-assigner.log
+
+  Paths below are configured for ceciliesmestad. If another user installs
+  this, update the four absolute paths to match the install location.
 -->
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -17,14 +29,18 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/jens-aidn/Documents/Koding/work/PB_assignerV2/.venv/bin/python</string>
+        <string>/Users/ceciliesmestad/Documents/Claude/Projects/PB/PB_assignerV2/.venv/bin/python</string>
         <string>-m</string>
         <string>backend.cli</string>
         <string>run</string>
+        <!-- Dry-run vs. live is now controlled by config.toml's
+             classifier.autopilot_dry_run (flippable from the UI Mode card,
+             no plist edit required). To force dry-run for this job only,
+             re-add: <string>&#45;&#45;dry-run</string> -->
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/jens-aidn/Documents/Koding/work/PB_assignerV2</string>
+    <string>/Users/ceciliesmestad/Documents/Claude/Projects/PB/PB_assignerV2</string>
 
     <key>EnvironmentVariables</key>
     <dict>
@@ -33,16 +49,17 @@
     </dict>
 
     <key>StandardOutPath</key>
-    <string>/Users/jens-aidn/Library/Logs/pb-assigner.log</string>
+    <string>/Users/ceciliesmestad/Library/Logs/pb-assigner.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/jens-aidn/Library/Logs/pb-assigner.log</string>
+    <string>/Users/ceciliesmestad/Library/Logs/pb-assigner.log</string>
 
-    <!-- Fire daily at 07:00. If the laptop is asleep, launchd will run it on
-         next wake; it won't queue multiple missed runs. -->
+    <!-- Fire daily at 09:00 (Cecilie is at her desk by then). If the laptop is
+         asleep, launchd will run it on next wake; it won't queue multiple
+         missed runs. -->
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
-        <integer>7</integer>
+        <integer>9</integer>
         <key>Minute</key>
         <integer>0</integer>
     </dict>

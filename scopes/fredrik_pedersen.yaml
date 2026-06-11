@@ -1,0 +1,68 @@
+# Scope: Fredrik Pedersen — Team Patient
+# Notes are in Norwegian (may contain English terms). Do not translate.
+#
+# History: this scope was carved out of erik_story.yaml on 2026-04-28 when
+# Erik handed off Patient to focus on AI & Automation. Strong keywords and
+# disambiguations are preserved verbatim from Erik's original Patient half.
+
+pm_email: fredrik.pedersen@aidn.no
+pm_name: Fredrik Pedersen
+team: Team Patient
+
+description_no: |
+  Fredrik eier Team Patient: pasientens egne flater (Mitt Aidn-portalen,
+  pasientportal-funksjoner), portal-/avdelings-kalender og kalendersamarbeid,
+  innbyggerdialog og selvbetjening, samt tilgrensende integrasjoner mot
+  Helsenorge og KS DigiHelse. Klassisk "alt pasient ser og rører".
+
+includes:
+  - Mitt Aidn / MittAidn / "Mitt Aiden" (vanlig stavefeil) — pasientportal
+  - Portal-kalender, timebestilling for pasient
+  - Avdelingskalender, kalendersamarbeid internt
+  - Pasient-selvbetjening
+  - Samtykkeadministrasjon og pårørende-tilgang via Mitt Aidn
+  - Innbyggerdialog og meldingsutveksling via Mitt Aidn
+  - Digitale klager og søknader via Mitt Aidn
+  - Innhenting av dokumenter/bilder fra innbygger via Mitt Aidn
+  - Helsenorge-integrasjon (Mitt Aidn)
+  - KS DigiHelse-integrasjon
+  - Egne skjema til søkere i Mitt Aidn
+  - Ruting av søknader/henvendelser i Mitt Aidn
+  - ExorLive-deling via innbyggerløsning (Mitt Aidn)
+  - Gruppeaktiviteter / gruppetrening i kalender
+  - Varsler og SMS-påminnelser til pasient ved avtaler
+  - Mitt Aidn-app (mobiltilgang for pasient/pårørende)
+
+excludes:
+  - AI-funksjoner og automatisering (tale-til-tekst, automasjonsplattform osv.)  → Erik (AI & Automation)
+  - Faktura + arbeidsflyt                        → Jens (Back Office)
+  - Søknadssaksbehandling (endringer etter innsending, søknadsflyt internt) → Team Case Handling
+  - Tale-til-tekst i kartlegging/saksbehandling  → Kristin (Case Handling)
+
+tag_routes:
+  - "team patient"
+
+keywords_strong:
+  - mitt aidn
+  - mittaidn
+  - portal-kalender
+  - pasientportal
+  - pasient-selvbetjening
+  - avdelingskalender
+  - helsenorge-integrasjon
+  - samtykkeadministrasjon
+  - pårørende-tilgang
+  - innbyggerdialog
+  - ks digihelse
+  - exorlive
+  - varsler til pasient
+  - mitt aidn app
+  - gruppeaktiviteter
+
+disambiguations:
+  - "'Avdelingskalender' tilhører Fredrik (kalendervisning/samarbeid), ikke rute-/turnusplanlegging → Team Workforce"
+  - "'Digitale klager' via Mitt Aidn → Fredrik; klagesaksbehandling internt → Team Case Handling"
+  - "'Tale-til-tekst' / AI-funksjoner → Erik (Team AI & Automation), selv om de eksponeres i pasientportalen"
+
+hard_negatives:
+  - "manuell avslutning av flyt"  # intern feedback, ekskluder helt

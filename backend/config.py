@@ -17,6 +17,11 @@ class ProductboardConfig:
     token: str = ""
     ssl_verify: bool = False
     patch_delay_seconds: float = 0.3
+    # Which PB REST API major version to talk. "v1" (default) and "v2" are both
+    # supported during the v1→v2 migration window (v1 sunset: 2026-07-08).
+    # See docs/v2_migration_plan.md for the diff. Keep "v1" as the default until
+    # v2 has been verified end-to-end on the live workspace, then flip.
+    api_version: str = "v1"
 
 
 @dataclass
@@ -35,13 +40,44 @@ class AnthropicConfig:
 @dataclass
 class ClassifierConfig:
     needs_attention_below: float = 0.6
-    autopilot_min_confidence: float = 0.8
+    # Notes with classification confidence at or above this auto-assign when
+    # autopilot_enabled is true. Started conservative (0.90) for the manual→
+    # autopilot ramp; lower as you build trust in the suggestions.
+    autopilot_min_confidence: float = 0.9
+    # Master switch for autopilot. False = classify and queue (today's behavior).
+    # True = also auto-PATCH high-confidence suggestions to PB.
+    autopilot_enabled: bool = False
+    # Safety harness. True = record audit rows tagged [DRY-RUN] but never call
+    # PB. False = real PATCHes go through. Lets the UI flip dry-run↔live without
+    # editing the launchd plist. Both the scheduled `pb-assigner run` job and
+    # the `POST /api/run` endpoint honour this flag. The CLI's `--dry-run` flag
+    # forces dry-run for one-off runs regardless of this config value.
+    autopilot_dry_run: bool = True
+    # Circuit breakers — protect against scope decay or runaway misclassification.
+    # If a single run wants to auto-assign more than per_pm_cap notes to ONE PM,
+    # the overflow is queued for review instead. Same idea for total_cap across
+    # all PMs in one run, but as a "something is very wrong" tripwire — entire
+    # batch is queued and a warning logged.
+    autopilot_per_pm_cap: int = 20
+    autopilot_total_cap: int = 200
 
 
 @dataclass
 class TrainingConfig:
     window_days: int = 180   # ~6 months of PB-owned notes per PM
     min_notes_per_pm: int = 5
+
+
+@dataclass
+class SlackConfig:
+    # Incoming-webhook URL for the alerts channel (#productboard-assignment-alerts).
+    # Create at https://api.slack.com/apps → Incoming Webhooks. Overridable via
+    # the SLACK_WEBHOOK_URL environment variable (used by GitHub Actions).
+    webhook_url: str = ""
+    enabled: bool = True
+    # False when running behind Aidn's corporate proxy (Zscaler) — mirrors the
+    # productboard/anthropic flags. Keep true in cloud environments.
+    ssl_verify: bool = True
 
 
 @dataclass
@@ -62,6 +98,7 @@ class Config:
     anthropic: AnthropicConfig = field(default_factory=AnthropicConfig)
     classifier: ClassifierConfig = field(default_factory=ClassifierConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
+    slack: SlackConfig = field(default_factory=SlackConfig)
     server: ServerConfig = field(default_factory=ServerConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
 
@@ -95,6 +132,7 @@ def load_config(path: Path | str | None = None) -> Config:
         anthropic=AnthropicConfig(**(raw.get("anthropic") or {})),
         classifier=ClassifierConfig(**(raw.get("classifier") or {})),
         training=TrainingConfig(**(raw.get("training") or {})),
+        slack=SlackConfig(**(raw.get("slack") or {})),
         server=ServerConfig(**(raw.get("server") or {})),
         storage=StorageConfig(**(raw.get("storage") or {})),
     )
@@ -106,17 +144,23 @@ def load_config(path: Path | str | None = None) -> Config:
         cfg.anthropic.api_key = env_anth
     if env_db := os.environ.get("PB_ASSIGNER_DB_PATH"):
         cfg.storage.db_path = env_db
+    if env_slack := os.environ.get("SLACK_WEBHOOK_URL"):
+        cfg.slack.webhook_url = env_slack
 
     return cfg
 
 
 def patch_config_toml(patches: dict[tuple[str, str], str], path: Path | None = None) -> None:
-    """Update specific key = "value" lines in config.toml without destroying comments.
+    """Update specific key = value lines in config.toml without destroying comments.
 
     patches = {("section", "key"): "new_value"}
 
+    Auto-detects whether the existing value is quoted (string) or bare
+    (bool / int / float) and rewrites in the same shape. So passing
+    {("classifier", "autopilot_enabled"): "true"} writes  autopilot_enabled = true
+    while {("productboard", "token"): "abc"} writes  token = "abc"
+
     If config.toml doesn't exist it is created from config.example.toml first.
-    Only string values (quoted in TOML) are supported — enough for tokens/keys.
     """
     target = path or DEFAULT_CONFIG_PATH
     if not target.exists():
@@ -128,18 +172,31 @@ def patch_config_toml(patches: dict[tuple[str, str], str], path: Path | None = N
     remaining = dict(patches)
     result: list[str] = []
 
+    # Two regexes: one for quoted (string) values, one for bare (bool/numeric).
+    # Order matters — try quoted first, then fall back to bare.
+    quoted_re = re.compile(r'^(\s*)(\w+)(\s*=\s*)"[^"]*"')
+    # Use [ \t] (not \s) for trailing whitespace so the regex doesn't swallow
+    # the line-ending \n and cause a duplicate newline on rewrite.
+    bare_re   = re.compile(r'^(\s*)(\w+)(\s*=\s*)([^"#\s][^#\n]*?)([ \t]*(?:#[^\n]*)?)$', re.MULTILINE)
+
     for line in lines:
         section_m = re.match(r'^\s*\[([^\]]+)\]', line)
         if section_m:
             current_section = section_m.group(1).strip()
 
         if current_section:
-            key_m = re.match(r'^(\s*)(\w+)(\s*=\s*)"[^"]*"', line)
-            if key_m:
-                key = key_m.group(2)
-                if (current_section, key) in remaining:
+            qm = quoted_re.match(line)
+            if qm and (current_section, qm.group(2)) in remaining:
+                key = qm.group(2)
+                new_val = remaining.pop((current_section, key))
+                line = f'{qm.group(1)}{key}{qm.group(3)}"{new_val}"\n'
+            else:
+                bm = bare_re.match(line)
+                if bm and (current_section, bm.group(2)) in remaining:
+                    key = bm.group(2)
                     new_val = remaining.pop((current_section, key))
-                    line = f'{key_m.group(1)}{key}{key_m.group(3)}"{new_val}"\n'
+                    trailing = bm.group(5) or ""
+                    line = f'{bm.group(1)}{key}{bm.group(3)}{new_val}{trailing}\n'
 
         result.append(line)
 

@@ -68,6 +68,16 @@ The classifier is driven by scope YAML files in `scopes/`. Training improves the
 
 After approving updates, commit the changed YAML files in `scopes/`.
 
+### Analysing feedback content (Insights tab)
+
+Per-PM content analysis, independent of classification. Useful for PMs skimming what their users have been saying.
+
+1. Select a PM
+2. Pick a time window (1 week / 1 month / 3 months / 6 months)
+3. Click **Generate insights** — fetches that PM's PB notes and runs them through Claude once to (a) categorise each note (tender / feedback / bug / feature_request / question / other) and (b) write a Norwegian summary of the non-tender content.
+
+Output: KPI cards (total / feedback / tender / municipalities), a frequency chart (day/week/month buckets depending on window), a note-type breakdown, a top-municipalities list, and the generated summary. Takes ~20–40 seconds depending on note volume.
+
 ### Seeing what's happening (Console tab)
 
 Live log tail from the backend. Colour-coded: red = error, amber = warning. Useful when Fetch notes is slow or something fails.
@@ -169,7 +179,7 @@ GET  /api/suggestions           reviewer queue
 POST /api/notes/{id}/assign     body: {pm_email}
 POST /api/notes/{id}/skip
 POST /api/run                   ingest + classify
-GET  /api/dashboard             aggregate stats
+POST /api/insights?pm_email=&window_days=   per-PM content analysis (categorises notes + Norwegian summary)
 GET  /api/scopes/{pm_email}     raw YAML + version history
 POST /api/train/propose?pm_email=&window_days=
 POST /api/train/apply
@@ -201,3 +211,13 @@ The org has a 30k token/minute limit. Train one PM at a time — use the PM sele
 
 **Corporate proxy / SSL errors:**
 Both `ssl_verify = false` flags in `config.toml` (under `[productboard]` and `[anthropic]`) must be set. The Config tab doesn't expose these — edit `config.toml` directly if needed.
+
+---
+
+## Slack notifications & cloud runs (added 2026-06-11)
+
+- **Autopilot is LIVE** (`autopilot_dry_run = false`). High-confidence (≥0.7) suggestions are PATCHed to PB automatically; the rest wait in the Reviewer tab.
+- **Slack**: `backend/notify.py` posts a per-run digest + alerts (Norwegian) to **#productboard-assignment-alerts** via an incoming webhook. Config: `[slack]` in `config.toml`, env override `SLACK_WEBHOOK_URL`. Run failures post a 🚨 message. Notifications fire only from `pb-assigner run` (CLI/scheduled), not from UI-triggered runs.
+- **Cloud schedule**: `.github/workflows/daily-run.yml` runs daily 07:00 UTC (09:00 CEST) on GitHub Actions using `config.ci.toml` (committed, no secrets) + repo secrets `PB_TOKEN`, `ANTHROPIC_API_KEY`, `SLACK_WEBHOOK_URL`. The SQLite DB is carried between runs via the Actions cache. When Actions is active, the local launchd job should be unloaded to avoid double digests.
+- Setup steps: `docs/summer_autopilot_setup.md`.
+- ⚠️ PB API **v1 sunsets 2026-07-08** — migrate `backend/pb_client.py` to v2 (`docs/v2_migration_plan.md`) before then or the daily run will fail.

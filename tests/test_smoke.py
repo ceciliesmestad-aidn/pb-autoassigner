@@ -33,10 +33,12 @@ def test_ingest_is_idempotent(tmp_config, fake_pb):
 
 def test_classify_assigns_pms(tmp_config, fake_pb, fake_anthropic, monkeypatch):
     # Patch the Classifier to use our fake Anthropic client instead of hitting the API.
+    # Accept **kwargs so we don't care which construction kwargs classify.py adds
+    # (timeout, http_client, …) — the fake ignores them all.
     monkeypatch.setattr(
         classify_mod,
         "anthropic",
-        type("M", (), {"Anthropic": lambda api_key=None: fake_anthropic}),
+        type("M", (), {"Anthropic": lambda **kwargs: fake_anthropic}),
     )
 
     with db.connect(tmp_config.db_path) as conn:
@@ -57,7 +59,7 @@ def test_classify_assigns_pms(tmp_config, fake_pb, fake_anthropic, monkeypatch):
                 """
             )
         }
-        assert by_title["Revurdering av tjenester fungerer ikke"]["pm_email"] == "kristin.hoiaas@aidn.no"
+        assert by_title["Revurdering av tjenester fungerer ikke"]["pm_email"] == "kristin.shovick@aidn.no"
         assert by_title["Legemiddelkurve — dosering mangler"]["pm_email"] == "sandra.otteraaen@aidn.no"
         assert by_title["Mitt Aidn timebestilling feiler"]["pm_email"] == "erik.story@aidn.no"
         assert by_title["test"]["pm_email"] is None  # low-confidence fallback
@@ -67,7 +69,7 @@ def test_assign_records_audit_and_updates_state(tmp_config, fake_pb, fake_anthro
     monkeypatch.setattr(
         classify_mod,
         "anthropic",
-        type("M", (), {"Anthropic": lambda api_key=None: fake_anthropic}),
+        type("M", (), {"Anthropic": lambda **kwargs: fake_anthropic}),
     )
 
     with db.connect(tmp_config.db_path) as conn:
@@ -79,11 +81,11 @@ def test_assign_records_audit_and_updates_state(tmp_config, fake_pb, fake_anthro
         ).fetchone()
 
         result = pipeline.assign_note(
-            conn, fake_pb, revurdering["id"], "kristin.hoiaas@aidn.no"
+            conn, fake_pb, revurdering["id"], "kristin.shovick@aidn.no"
         )
         assert result["pb_status"] == 201
         assert result["was_override"] is False
-        assert fake_pb.patches == [(revurdering["pb_uuid"], "kristin.hoiaas@aidn.no")]
+        assert fake_pb.patches == [(revurdering["pb_uuid"], "kristin.shovick@aidn.no")]
 
         state = conn.execute(
             "SELECT state FROM notes WHERE id = ?", (revurdering["id"],)
@@ -93,8 +95,8 @@ def test_assign_records_audit_and_updates_state(tmp_config, fake_pb, fake_anthro
         audit = conn.execute(
             "SELECT pm_email, suggested_pm, was_override, pb_status FROM assignments"
         ).fetchone()
-        assert audit["pm_email"] == "kristin.hoiaas@aidn.no"
-        assert audit["suggested_pm"] == "kristin.hoiaas@aidn.no"
+        assert audit["pm_email"] == "kristin.shovick@aidn.no"
+        assert audit["suggested_pm"] == "kristin.shovick@aidn.no"
         assert audit["was_override"] == 0
         assert audit["pb_status"] == 201
 
@@ -103,7 +105,7 @@ def test_assign_with_override_flags_audit(tmp_config, fake_pb, fake_anthropic, m
     monkeypatch.setattr(
         classify_mod,
         "anthropic",
-        type("M", (), {"Anthropic": lambda api_key=None: fake_anthropic}),
+        type("M", (), {"Anthropic": lambda **kwargs: fake_anthropic}),
     )
     with db.connect(tmp_config.db_path) as conn:
         pipeline.ingest(conn, fake_pb)
@@ -125,12 +127,12 @@ def test_train_proposes_and_applies(tmp_config, fake_pb, fake_anthropic, monkeyp
     monkeypatch.setattr(
         classify_mod,
         "anthropic",
-        type("M", (), {"Anthropic": lambda api_key=None: fake_anthropic}),
+        type("M", (), {"Anthropic": lambda **kwargs: fake_anthropic}),
     )
     monkeypatch.setattr(
         train,
         "anthropic",
-        type("M", (), {"Anthropic": lambda api_key=None: fake_anthropic}),
+        type("M", (), {"Anthropic": lambda **kwargs: fake_anthropic}),
     )
 
     # Redirect scopes to a tmp copy so the test doesn't overwrite repo files.
@@ -172,7 +174,7 @@ def test_dashboard_stats_shape(tmp_config, fake_pb, fake_anthropic, monkeypatch)
     monkeypatch.setattr(
         classify_mod,
         "anthropic",
-        type("M", (), {"Anthropic": lambda api_key=None: fake_anthropic}),
+        type("M", (), {"Anthropic": lambda **kwargs: fake_anthropic}),
     )
     with db.connect(tmp_config.db_path) as conn:
         pipeline.ingest(conn, fake_pb)

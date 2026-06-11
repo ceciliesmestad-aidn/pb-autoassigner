@@ -465,6 +465,46 @@ def assignments_for_pm(
     return [dict(r) for r in rows]
 
 
+def recent_autopilot_assignments(
+    conn: sqlite3.Connection, hours: int = 24, limit: int = 200,
+) -> list[dict]:
+    """Last N hours of autopilot assignments — feeds the Recent Autopilot tab.
+
+    Joins to notes for title/url so the UI can show context. Includes the
+    suggestion's reasoning so a quick override decision doesn't need extra
+    round-trips. pb_status=NULL with pb_error containing '[DRY-RUN]'
+    distinguishes dry-run rows from real PATCHes.
+    """
+    rows = conn.execute(
+        """
+        SELECT a.id            AS assignment_id,
+               a.note_id,
+               a.pm_email,
+               a.confidence,
+               a.assigned_at,
+               a.pb_status,
+               a.pb_error,
+               n.pb_uuid,
+               n.title,
+               n.display_url,
+               n.company,
+               n.state          AS note_state,
+               (SELECT s.reasoning
+                  FROM suggestions s
+                 WHERE s.note_id = a.note_id
+                 ORDER BY s.id DESC LIMIT 1)  AS reasoning
+          FROM assignments a
+          JOIN notes n ON n.id = a.note_id
+         WHERE a.assigned_by = 'autopilot'
+           AND a.assigned_at >= datetime('now', ?)
+         ORDER BY a.assigned_at DESC
+         LIMIT ?
+        """,
+        (f"-{hours} hours", limit),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def training_history(conn: sqlite3.Connection, pm_email: str) -> list[dict]:
     rows = conn.execute(
         """

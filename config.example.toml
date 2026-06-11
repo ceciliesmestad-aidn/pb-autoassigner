@@ -8,6 +8,10 @@ token = ""
 ssl_verify = false
 # Rate-limit delay between PATCH calls, in seconds.
 patch_delay_seconds = 0.3
+# Which PB REST API major version to talk. "v1" or "v2".
+# v1 is deprecated and sunsets 2026-07-08. Flip to "v2" once the v2 client has
+# been verified end-to-end on the live workspace. See docs/v2_migration_plan.md.
+api_version = "v2"
 
 [anthropic]
 # Anthropic API key. Also honoured via env var ANTHROPIC_API_KEY.
@@ -28,8 +32,25 @@ timeout_seconds = 60.0
 [classifier]
 # Confidence below this is flagged as "needs attention" in the UI.
 needs_attention_below = 0.6
-# Notes with confidence below this are never auto-assigned (reserved for future autopilot).
-autopilot_min_confidence = 0.8
+# Confidence at or above this auto-assigns when autopilot_enabled = true.
+# Start conservative (0.90). Lower as you build trust in the suggestions.
+autopilot_min_confidence = 0.9
+# Master switch. False = classify and queue (manual review). True = also
+# auto-PATCH high-confidence suggestions to Productboard. Can be flipped
+# from the UI's Mode toggle without restarting.
+autopilot_enabled = false
+# Safety harness. True = autopilot logs [DRY-RUN] audit rows but never PATCHes
+# PB. Lets you verify suggestions in the Recent Autopilot tab before going
+# live. False = real PATCHes. Default true so a fresh install never accidentally
+# writes to PB. Flip via the UI Mode card or POST /api/setup/set-autopilot-dry-run.
+autopilot_dry_run = true
+# Circuit breakers — protect against scope decay or runaway misclassification.
+# If one run would auto-assign more than per_pm_cap notes to ONE PM, the
+# overflow lands in the review queue. total_cap is a "something is very wrong"
+# tripwire — if exceeded, the WHOLE batch is queued for review and a warning
+# is logged. Raise these as you observe real volumes.
+autopilot_per_pm_cap = 20
+autopilot_total_cap = 200
 
 [training]
 # Days of history to pull from PB per PM for training (notes owned by that PM).
@@ -37,6 +58,15 @@ autopilot_min_confidence = 0.8
 window_days = 180
 # Minimum notes a PM must have owned in the window before we propose an update.
 min_notes_per_pm = 5
+
+[slack]
+# Incoming-webhook URL for the alerts channel. Create at
+# https://api.slack.com/apps -> Incoming Webhooks, then paste here.
+# Also honoured via env var SLACK_WEBHOOK_URL (used by GitHub Actions).
+webhook_url = ""
+enabled = true
+# false behind a corporate TLS-intercepting proxy, true in the cloud.
+ssl_verify = true
 
 [server]
 host = "127.0.0.1"

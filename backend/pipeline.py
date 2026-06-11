@@ -154,6 +154,127 @@ def classify_pending(
     return stats
 
 
+def auto_assign_high_confidence(
+    conn: sqlite3.Connection,
+    client: pb_client.PBClient,
+    cfg: Config,
+    *,
+    dry_run: bool = False,
+) -> dict:
+    """Auto-PATCH every fresh suggestion at-or-above the autopilot threshold.
+
+    Runs after classify_pending. Each candidate must satisfy ALL of:
+      - state == 'suggested'
+      - latest suggestion has pm_email set (i.e. not a 'leave open')
+      - confidence >= cfg.classifier.autopilot_min_confidence
+
+    Two circuit breakers guard against scope-doc decay or runaway
+    misclassification:
+
+      per_pm_cap   — if a single run would auto-assign more than N notes to
+                     ONE PM, the first N go through and the rest stay queued
+                     for human review. Catches "scope decay routes everything
+                     to one person".
+
+      total_cap    — if a single run would auto-assign more than M notes
+                     overall, the WHOLE batch is held back and queued for
+                     review with a warning log entry. This is a 'something is
+                     very wrong' tripwire, not a daily ceiling.
+
+    `dry_run=True` runs the same selection + capping logic but does NOT call
+    PB. The decisions are written to the audit table with pb_status=None and
+    a `[DRY-RUN]` marker in pb_error so the Recent Autopilot tab still shows
+    what *would* have happened. Use during the manual→autopilot ramp.
+
+    Returns a stats dict with per-PM counts, capped notes, and skipped notes.
+    """
+    threshold = cfg.classifier.autopilot_min_confidence
+    per_pm_cap = cfg.classifier.autopilot_per_pm_cap
+    total_cap = cfg.classifier.autopilot_total_cap
+
+    candidates = db.list_suggestions_with_notes(
+        conn,
+        states=("suggested",),
+        min_confidence=threshold,
+        limit=10_000,
+    )
+    # Drop "leave open" suggestions — pm_email is None when Claude bailed.
+    candidates = [c for c in candidates if c.get("suggested_pm")]
+
+    log.info(
+        "autopilot: %d candidate(s) at confidence >= %.2f%s",
+        len(candidates), threshold, " [DRY-RUN]" if dry_run else "",
+    )
+
+    stats: dict = {
+        "candidates": len(candidates),
+        "assigned": 0,
+        "queued_overflow_per_pm": 0,
+        "queued_total_cap_exceeded": 0,
+        "errors": 0,
+        "per_pm": {},
+        "dry_run": dry_run,
+        "threshold": threshold,
+    }
+
+    if not candidates:
+        return stats
+
+    # Total-cap tripwire — if the whole batch is too large, we trust nothing
+    # in this run. Queue everything for human review and bail out.
+    if len(candidates) > total_cap:
+        log.warning(
+            "autopilot: total cap exceeded (%d > %d) — queueing entire batch "
+            "for review. Investigate before flipping autopilot back on.",
+            len(candidates), total_cap,
+        )
+        stats["queued_total_cap_exceeded"] = len(candidates)
+        return stats
+
+    # Per-PM cap — assign first N per PM, queue the overflow.
+    pm_counts: dict[str, int] = {}
+    for c in candidates:
+        pm = c["suggested_pm"]
+        seen = pm_counts.get(pm, 0)
+        if seen >= per_pm_cap:
+            stats["queued_overflow_per_pm"] += 1
+            log.info(
+                "autopilot: per-PM cap reached for %s (>%d) — queueing note %s",
+                pm, per_pm_cap, c["note_id"],
+            )
+            continue
+        pm_counts[pm] = seen + 1
+
+        try:
+            if dry_run:
+                # Record a no-op audit row so Recent Autopilot can show it.
+                with db.transaction(conn):
+                    db.record_assignment(
+                        conn,
+                        note_id=c["note_id"],
+                        pm_email=pm,
+                        suggested_pm=pm,
+                        confidence=c["confidence"],
+                        assigned_by="autopilot",
+                        pb_status=None,
+                        pb_error="[DRY-RUN] would PATCH PB",
+                    )
+            else:
+                assign_note(
+                    conn, client, c["note_id"], pm,
+                    assigned_by="autopilot",
+                )
+            stats["assigned"] += 1
+            stats["per_pm"][pm] = stats["per_pm"].get(pm, 0) + 1
+        except Exception as e:
+            stats["errors"] += 1
+            log.exception("autopilot: failed to assign note %s → %s: %s",
+                          c["note_id"], pm, e)
+
+    log.info("autopilot: done — %s", {k: v for k, v in stats.items() if k != "per_pm"})
+    return stats
+
+
 def assign_note(
     conn: sqlite3.Connection,
     client: pb_client.PBClient,

@@ -31,3 +31,9 @@ frontend/.vite/
 
 # Logs
 *.log
+
+# Local runtime data — never push note content to GitHub
+data/
+
+# Local Claude settings
+.claude/

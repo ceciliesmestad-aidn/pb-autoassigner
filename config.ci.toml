@@ -1,0 +1,42 @@
+# Config used by the GitHub Actions daily run (.github/workflows/daily-run.yml).
+# Contains NO secrets — PB token, Anthropic key, and Slack webhook come from
+# GitHub repo secrets via env vars (PB_TOKEN, ANTHROPIC_API_KEY,
+# SLACK_WEBHOOK_URL). Safe to commit.
+
+[productboard]
+token = ""              # from env PB_TOKEN
+ssl_verify = true       # no corporate proxy in GitHub's cloud
+patch_delay_seconds = 0.3
+
+[anthropic]
+api_key = ""            # from env ANTHROPIC_API_KEY
+model_default = "claude-haiku-4-5-20251001"
+model_escalate = "claude-sonnet-4-6"
+escalate_below = 0.6
+batch_size = 10
+ssl_verify = true
+
+[classifier]
+needs_attention_below = 0.6
+autopilot_min_confidence = 0.7
+autopilot_enabled = true
+autopilot_dry_run = false   # LIVE — assignments are PATCHed to Productboard
+autopilot_per_pm_cap = 20
+autopilot_total_cap = 200
+
+[training]
+window_days = 180
+min_notes_per_pm = 5
+
+[slack]
+webhook_url = ""        # from env SLACK_WEBHOOK_URL
+enabled = true
+ssl_verify = true
+
+[server]
+host = "127.0.0.1"
+port = 8765
+
+[storage]
+db_path = "data/pb_assigner.db"
+scopes_dir = "scopes"

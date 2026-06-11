@@ -1,77 +1,63 @@
-# Scope: Erik Story — Team Patient / Team AI & Automation
+# Scope: Erik Story — Team AI & Automation
 # Notes are in Norwegian (may contain English terms). Do not translate.
+#
+# History: until 2026-04-28 Erik also owned Team Patient (Mitt Aidn etc.).
+# That half was handed off to Fredrik Pedersen — see scopes/fredrik_pedersen.yaml.
+# This scope now covers ONLY AI features, voice/speech tooling and the
+# automation engine. Patient-portal-only items are explicitly out.
 
 pm_email: erik.story@aidn.no
 pm_name: Erik Story
-team: Team Patient / Team AI & Automation
+team: Team AI & Automation
 
 description_no: |
-  Erik har to hatter: Team Patient (pasientens egne flater — Mitt Aidn,
-  portal-kalender, pasient-portalen) og Team AI & Automation (AI-funksjoner,
-  automatisering, tale-til-tekst som ikke er saksbehandling).
+  Erik eier AI- og automasjonsflatene: AI-funksjoner generelt
+  (tale-til-tekst, tale-til-sammendrag, tale-til-skjema), talekommandoer,
+  oversettelse, samt automasjonsplattformen og automatiseringsmotoren.
+  Sykehusinnleggelses-arbeidsflyter ligger her fordi de driver
+  automatiseringsmotoren — ikke fordi Erik eier sykehus-domenet.
 
 includes:
-  - Mitt Aidn / MittAidn / "Mitt Aiden" (vanlig stavefeil) — pasientportal
-  - Portal-kalender, timebestilling for pasient
-  - Avdelingskalender, kalendersamarbeid internt
-  - Pasient-selvbetjening
-  - Samtykkeadministrasjon og pårørende-tilgang via Mitt Aidn
-  - Innbyggerdialog og meldingsutveksling via Mitt Aidn
-  - Digitale klager og søknader via Mitt Aidn
-  - Innhenting av dokumenter/bilder fra innbygger via Mitt Aidn
-  - Helsenorge-integrasjon (Mitt Aidn)
-  - KS DigiHelse-integrasjon
-  - Egne skjema til søkere i Mitt Aidn
-  - Ruting av søknader/henvendelser i Mitt Aidn
   - AI-funksjoner generelt (tale-til-tekst, tale-til-sammendrag, tale-til-skjema)
   - Talekommandoer og navigering med stemme
+  - Oversettelsesfunksjonalitet (tale og tekst)
   - Automatiseringsmotor (eksternt orientert)
   - Automasjonsplattform for lokal konfigurasjon av arbeidsflyter
-  - Arbeidsflyter for sykehusinnleggelser
-  - Oversettelsesfunksjonalitet (tale og tekst)
-  - ExorLive-deling via innbyggerløsning (Mitt Aidn)
-  - Gruppeaktiviteter / gruppetrening i kalender
-  - Varsler og SMS-påminnelser til pasient ved avtaler
-  - Mitt Aidn-app (mobiltilgang for pasient/pårørende)
+  - Arbeidsflyter for sykehusinnleggelser (fordi de driver automasjonsmotoren)
 
 excludes:
-  - Tale-til-tekst i kartlegging/saksbehandling  → Kristin (Case Handling)
+  - Mitt Aidn / pasientportal-funksjoner          → Fredrik (Team Patient)
+  - Portal-kalender og avdelingskalender          → Fredrik (Team Patient)
+  - Innbyggerdialog og selvbetjening              → Fredrik (Team Patient)
+  - Helsenorge / KS DigiHelse-integrasjoner       → Fredrik (Team Patient)
+  - Tale-til-tekst i kartlegging/saksbehandling   → Kristin (Case Handling)
   - Intern automation-feedback ("Manuell avslutning av flyt") → ekskluder
-  - Faktura + arbeidsflyt                        → Jens (Back Office)
-  - Søknadssaksbehandling (endringer etter innsending, søknadsflyt internt) → Team Case Handling
+  - Faktura + arbeidsflyt                         → Jens (Back Office)
 
 tag_routes:
-  - "team patient"
   - "team ai"
   - "team automation"
 
 keywords_strong:
-  - mitt aidn
-  - mittaidn
-  - portal-kalender
-  - pasientportal
-  - pasient-selvbetjening
   - ai-funksjon
+  - ai-funksjoner
   - automatisering
-  - avdelingskalender
-  - helsenorge-integrasjon
-  - samtykkeadministrasjon
-  - pårørende-tilgang
-  - innbyggerdialog
-  - talekommandoer
+  - automasjonsplattform
+  - automasjonsmotor
+  - automatiseringsmotor
+  - tale-til-tekst
   - tale-til-sammendrag
   - tale-til-skjema
-  - ks digihelse
-  - exorlive
-  - varsler til pasient
-  - mitt aidn app
-  - gruppeaktiviteter
-  - automasjonsplattform
+  - talekommandoer
+  - taledokumentasjon
+  - stemmestyring
+  - oversettelse
+  - sykehusinnleggelse
 
 disambiguations:
-  - "'Avdelingskalender' tilhører Erik (kalendervisning/samarbeid), ikke rute-/turnusplanlegging → Team Workforce"
   - "'Tale-til-tekst' i journal/kartleggingssammenheng → vurder Kristin (Case Handling) hvis kontekst er saksbehandling"
-  - "'Digitale klager' via Mitt Aidn → Erik; klagesaksbehandling internt → Team Case Handling"
+  - "AI-funksjon eksponert i Mitt Aidn (f.eks. tale i pasientportal) → fortsatt Erik når det handler om selve AI-funksjonen, IKKE Fredrik"
+  - "'Automatisering av faktura/lønn' → Jens (Back Office), ikke Erik"
 
 hard_negatives:
   - "manuell avslutning av flyt"  # intern feedback, ekskluder helt

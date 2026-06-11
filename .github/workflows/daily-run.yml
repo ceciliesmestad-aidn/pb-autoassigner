@@ -1,0 +1,75 @@
+# Daily PB AutoAssigner run in the cloud — works while every laptop is off.
+#
+# Schedule: 07:00 UTC = 09:00 Norwegian summer time (CEST).
+# Manual trigger: GitHub → Actions → "Daily PB AutoAssigner run" → Run workflow.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   PB_TOKEN            Productboard API token
+#   ANTHROPIC_API_KEY   Anthropic API key
+#   SLACK_WEBHOOK_URL   Incoming webhook for #productboard-assignment-alerts
+#
+# The SQLite DB is carried between runs via the Actions cache. If the cache
+# is ever evicted, the run rebuilds state from Productboard (PB is the source
+# of truth for what is unassigned) — worst case a previously-seen waiting
+# note is re-alerted once.
+
+name: Daily PB AutoAssigner run
+
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: pb-assigner-daily
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Restore note database from previous run
+        uses: actions/cache/restore@v4
+        with:
+          path: data/pb_assigner.db
+          key: pb-assigner-db-${{ github.run_id }}
+          restore-keys: |
+            pb-assigner-db-
+
+      - name: Install
+        run: |
+          mkdir -p data
+          pip install -e .
+
+      - name: Ingest + classify + auto-assign
+        env:
+          PB_TOKEN: ${{ secrets.PB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: python -m backend.cli --config config.ci.toml run
+
+      - name: Save note database for next run
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/pb_assigner.db
+          key: pb-assigner-db-${{ github.run_id }}
+
+      # Belt-and-braces: the app already posts a Slack failure message itself,
+      # but this also catches failures BEFORE the app starts (checkout, pip,
+      # bad secrets).
+      - name: Alert Slack if the workflow failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -sS -X POST -H 'Content-type: application/json' --data \
+            "{\"text\":\":rotating_light: *PB AutoAssigner: GitHub Actions-kjøringen feilet* — notater blir IKKE tildelt. Se logg: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL" || true

@@ -98,7 +98,7 @@ class FakeAnthropicClient:
     def __init__(self, rules: dict[str, tuple[str | None, float, str]] | None = None):
         # rules: keyword → (pm_email_or_None, confidence, reasoning)
         self.rules = rules or {
-            "revurdering":      ("kristin.hoiaas@aidn.no", 0.95, "revurdering er alltid saksbehandling"),
+            "revurdering":      ("kristin.shovick@aidn.no", 0.95, "revurdering er alltid saksbehandling"),
             "legemiddelkurve":  ("sandra.otteraaen@aidn.no", 0.9,  "legemiddel → Treatment"),
             "mitt aidn":        ("erik.story@aidn.no", 0.9, "Mitt Aidn → Patient"),
         }

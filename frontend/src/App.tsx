@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Route, Routes, Navigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "./api";
 import Reviewer from "./pages/Reviewer";
-import Dashboard from "./pages/Dashboard";
+import RecentAutopilot from "./pages/RecentAutopilot";
+import Insights from "./pages/Insights";
 import Training from "./pages/Training";
 import ConsolePage from "./pages/Console";
 import ConfigPage from "./pages/Config";
@@ -13,20 +14,35 @@ type Mode = "manual" | "autopilot";
 
 export default function App() {
   const qc = useQueryClient();
-  const [mode, setMode] = useState<Mode>(
-    () => (localStorage.getItem("pb-assigner.mode") as Mode) || "manual"
-  );
+  // Source of truth for the toggle is the backend config (autopilot_enabled
+  // in config.toml). We mirror it into local state so the UI updates
+  // immediately on click; the mutation below writes through to disk.
+  const cfg = useQuery({ queryKey: ["config"], queryFn: api.config });
+  const [mode, setMode] = useState<Mode>("manual");
+  useEffect(() => {
+    if (cfg.data) setMode(cfg.data.autopilot_enabled ? "autopilot" : "manual");
+  }, [cfg.data]);
+
   const run = useMutation({
     mutationFn: api.run,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["suggestions"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["recent-autopilot"] });
+    },
+  });
+
+  const flipMode = useMutation({
+    mutationFn: (m: Mode) => api.setAutopilot(m === "autopilot"),
+    onSuccess: (_data, m) => {
+      setMode(m);
+      qc.invalidateQueries({ queryKey: ["config"] });
     },
   });
 
   const setModePersist = (m: Mode) => {
-    setMode(m);
-    localStorage.setItem("pb-assigner.mode", m);
+    if (m === mode || flipMode.isPending) return;
+    flipMode.mutate(m);
   };
 
   return (
@@ -36,13 +52,18 @@ export default function App() {
           <div className="font-semibold text-slate-900">PB AutoAssigner</div>
           <nav className="flex gap-1 text-sm">
             <TabLink to="/reviewer">Reviewer</TabLink>
-            <TabLink to="/dashboard">Dashboard</TabLink>
+            <TabLink to="/recent-autopilot">Recent autopilot</TabLink>
+            <TabLink to="/insights">Insights</TabLink>
             <TabLink to="/training">Training</TabLink>
             <TabLink to="/console">Console</TabLink>
             <TabLink to="/config">Config</TabLink>
           </nav>
           <div className="ml-auto flex items-center gap-3">
-            <ModeToggle mode={mode} onChange={setModePersist} />
+            <ModeToggle
+              mode={mode}
+              onChange={setModePersist}
+              disabled={flipMode.isPending}
+            />
             {run.isSuccess && !run.isPending && (
               <span className="text-xs text-slate-500">
                 last fetch: {String(run.data?.ingest.inserted)} new, {" "}
@@ -64,7 +85,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/reviewer" replace />} />
           <Route path="/reviewer" element={<Reviewer />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/recent-autopilot" element={<RecentAutopilot />} />
+          <Route path="/insights" element={<Insights />} />
+          <Route path="/dashboard" element={<Navigate to="/insights" replace />} />
           <Route path="/training" element={<Training />} />
           <Route path="/console" element={<ConsolePage />} />
           <Route path="/config" element={<ConfigPage />} />
@@ -89,20 +112,28 @@ export default function App() {
 function ModeToggle({
   mode,
   onChange,
+  disabled,
 }: {
   mode: Mode;
   onChange: (m: Mode) => void;
+  disabled?: boolean;
 }) {
   const base =
-    "text-xs px-2.5 py-1 rounded-md transition-colors font-medium";
+    "text-xs px-2.5 py-1 rounded-md transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed";
   return (
     <div
       className="flex items-center gap-0.5 p-0.5 rounded-md bg-slate-100 border border-slate-200"
       role="tablist"
       aria-label="Assignment mode"
+      title={
+        mode === "autopilot"
+          ? "Autopilot ON — high-confidence notes auto-assign on the next launchd run."
+          : "Manual — every note waits for review on the Reviewer tab."
+      }
     >
       <button
         type="button"
+        disabled={disabled}
         onClick={() => onChange("manual")}
         className={[
           base,
@@ -115,6 +146,7 @@ function ModeToggle({
       </button>
       <button
         type="button"
+        disabled={disabled}
         onClick={() => onChange("autopilot")}
         className={[
           base,
