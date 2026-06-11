@@ -292,10 +292,12 @@ class PBClient:
         if self.api_version == "v2":
             # v2: fields.owner is either a dict or null. Belt-and-braces: also
             # drop archived notes client-side in case the server-side
-            # archived=false filter is ever ignored.
+            # archived=false filter is ever ignored, and skip abandoned drafts
+            # (see _is_empty_draft) that the PB web UI hides but v2 returns.
             return [n for n in self.list_notes()
                     if not (n.get("fields") or {}).get("owner")
-                    and not (n.get("fields") or {}).get("archived")]
+                    and not (n.get("fields") or {}).get("archived")
+                    and not _is_empty_draft(n)]
         # v1: owner is top-level
         return [n for n in self.list_notes() if not n.get("owner")]
 
@@ -315,6 +317,23 @@ class PBClient:
         status, _ = self._request("PATCH", path, body=body)
         time.sleep(self.patch_delay_seconds)
         return status
+
+
+def _is_empty_draft(raw: dict) -> bool:
+    """True for abandoned '+ Note' drafts: no content and no real title.
+
+    Clicking '+ Note' in the PB web app creates a server-side note titled
+    'New note'; if the user closes without typing, the empty object lingers
+    forever. The web UI hides these (they don't appear even on an
+    'Unassigned' filter), but GET /v2/notes returns them — confirmed live
+    2026-06-11 with 17 such notes. There is nothing to classify in them, so
+    the assigner skips them. A note with a real title but no content is NOT
+    considered a draft.
+    """
+    fields = raw.get("fields") or {}
+    content = (fields.get("content") or "").strip()
+    name = (fields.get("name") or "").strip()
+    return not content and name in ("", "New note")
 
 
 class PBError(Exception):

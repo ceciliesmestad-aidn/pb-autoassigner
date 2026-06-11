@@ -398,3 +398,12 @@ def test_company_names_falls_back_to_v1_when_v2_endpoint_missing():
         assert c.company_names() == {"c1": "Oslo kommune"}
     finally:
         PBClient._request_url = orig  # type: ignore[method-assign]
+
+
+def test_fetch_unassigned_v2_skips_empty_drafts():
+    c = PBClient(token="t", api_version="v2", patch_delay_seconds=0)
+    draft = {"id": "d1", "fields": {"name": "New note", "content": "", "owner": None, "archived": False}}
+    real = {"id": "r1", "fields": {"name": "Ekte notat", "content": "", "owner": None, "archived": False}}
+    stub = StubHTTP([(200, {"data": [draft, real], "links": {}})])
+    stub.bind(c)
+    assert [n["id"] for n in c.fetch_unassigned()] == ["r1"]
