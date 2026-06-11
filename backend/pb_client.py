@@ -152,9 +152,13 @@ class PBClient:
         # v2 uses bracket-notation query params and link-following pagination.
         # We pass fields=all so null fields (e.g. owner on unassigned notes) are
         # present with an explicit null — that lets fetch_unassigned() detect them.
+        # archived=false matches v1's default behaviour — without it, v2 also
+        # returns archived notes (e.g. abandoned "New note" drafts), which
+        # flooded the review queue when we first switched to v2.
         params: dict[str, str | int] = {
             "pageLimit": V2_PAGE_LIMIT,
             "fields": "all",
+            "archived": "false",
         }
         if owner_email:
             params["owner[email]"] = owner_email
@@ -225,9 +229,12 @@ class PBClient:
         filter client-side on the owner field, which differs per version.
         """
         if self.api_version == "v2":
-            # v2: fields.owner is either a dict or null
+            # v2: fields.owner is either a dict or null. Belt-and-braces: also
+            # drop archived notes client-side in case the server-side
+            # archived=false filter is ever ignored.
             return [n for n in self.list_notes()
-                    if not (n.get("fields") or {}).get("owner")]
+                    if not (n.get("fields") or {}).get("owner")
+                    and not (n.get("fields") or {}).get("archived")]
         # v1: owner is top-level
         return [n for n in self.list_notes() if not n.get("owner")]
 
