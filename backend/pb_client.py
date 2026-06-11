@@ -60,7 +60,10 @@ class PBClient:
     token: str
     ssl_verify: bool = False
     patch_delay_seconds: float = 0.3
-    timeout_seconds: int = 30
+    # v2 caps pages at 50 notes, so a full scan is ~60 requests — a single slow
+    # response behind the corporate proxy must not kill the run. Generous
+    # timeout + GET retries (see _request_url) handle that.
+    timeout_seconds: int = 90
     api_version: str = "v1"  # "v1" or "v2"
 
     def __post_init__(self) -> None:
@@ -92,18 +95,35 @@ class PBClient:
 
     def _request_url(self, method: str, url: str, *, body: dict | None = None) -> tuple[int, dict | None]:
         """Fire a request at an absolute URL. Used for v2 pagination where the
-        next-page URL is returned in `links.next` and should be followed as-is."""
+        next-page URL is returned in `links.next` and should be followed as-is.
+
+        GETs are retried up to 3 times on network timeouts/hiccups — a v2 full
+        scan is dozens of small pages and one slow response (corporate proxy,
+        PB blip) must not abort the whole run. Writes (PATCH/POST) are never
+        retried: they are not idempotent-safe.
+        """
         data = json.dumps(body).encode() if body is not None else None
-        req = urllib.request.Request(url, data=data, method=method, headers=self._headers())
-        try:
-            with urllib.request.urlopen(req, context=self._ssl_context(),
-                                         timeout=self.timeout_seconds) as resp:
-                raw = resp.read()
-                parsed = json.loads(raw) if raw else None
-                return resp.status, parsed
-        except urllib.error.HTTPError as e:
-            err_body = e.read().decode("utf-8", errors="replace")
-            raise PBError(e.code, err_body, url=url) from e
+        attempts = 3 if method == "GET" else 1
+        for attempt in range(1, attempts + 1):
+            req = urllib.request.Request(url, data=data, method=method, headers=self._headers())
+            try:
+                with urllib.request.urlopen(req, context=self._ssl_context(),
+                                             timeout=self.timeout_seconds) as resp:
+                    raw = resp.read()
+                    parsed = json.loads(raw) if raw else None
+                    return resp.status, parsed
+            except urllib.error.HTTPError as e:
+                err_body = e.read().decode("utf-8", errors="replace")
+                raise PBError(e.code, err_body, url=url) from e
+            except (TimeoutError, urllib.error.URLError, ConnectionError, OSError) as e:
+                if attempt == attempts:
+                    raise
+                wait = 3 * attempt
+                log.warning("PB %s %s failed (%s: %s) — retry %d/%d in %ds",
+                            method, url.split("?")[0], type(e).__name__, e,
+                            attempt, attempts - 1, wait)
+                time.sleep(wait)
+        raise AssertionError("unreachable")  # for the type checker
 
     def _request(self, method: str, path: str, *, params: dict | None = None,
                  body: dict | None = None) -> tuple[int, dict | None]:
