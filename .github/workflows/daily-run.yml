@@ -1,4 +1,5 @@
 # Daily PB AutoAssigner run in the cloud — works while every laptop is off.
+# (re-pushed to trigger GitHub workflow registration)
 #
 # Schedule: 07:00 UTC = 09:00 Norwegian summer time (CEST).
 # Manual trigger: GitHub → Actions → "Daily PB AutoAssigner run" → Run workflow.
