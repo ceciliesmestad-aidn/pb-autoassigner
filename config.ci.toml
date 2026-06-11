@@ -19,7 +19,7 @@ ssl_verify = true
 
 [classifier]
 needs_attention_below = 0.6
-autopilot_min_confidence = 0.7
+autopilot_min_confidence = 0.5
 autopilot_enabled = true
 autopilot_dry_run = false   # LIVE — assignments are PATCHed to Productboard
 autopilot_per_pm_cap = 20
