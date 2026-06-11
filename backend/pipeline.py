@@ -261,10 +261,19 @@ def auto_assign_high_confidence(
                         pb_error="[DRY-RUN] would PATCH PB",
                     )
             else:
-                assign_note(
+                result = assign_note(
                     conn, client, c["note_id"], pm,
                     assigned_by="autopilot",
                 )
+                # assign_note swallows PBError into the result dict so the
+                # audit row is always written — surface it here, otherwise a
+                # failed PATCH would be counted (and reported to Slack) as a
+                # successful assignment.
+                if result.get("pb_error"):
+                    stats["errors"] += 1
+                    log.error("autopilot: PB PATCH failed for note %s → %s: %s",
+                              c["note_id"], pm, result["pb_error"])
+                    continue
             stats["assigned"] += 1
             stats["per_pm"][pm] = stats["per_pm"].get(pm, 0) + 1
         except Exception as e:
