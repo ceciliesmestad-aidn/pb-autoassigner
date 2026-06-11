@@ -214,6 +214,21 @@ class PBClient:
         if self._company_names_cache is not None:
             return self._company_names_cache
 
+        names = self._company_names_v2()
+        if names is None:
+            # v2 has no companies endpoint (confirmed against the v2 docs,
+            # 2026-06-11) — fall back to v1's /companies, which works until
+            # the v1 sunset on 2026-07-08. After that this degrades to {} and
+            # only the Insights municipality stats are affected.
+            names = self._company_names_v1()
+
+        self._company_names_cache = names
+        log.info("company_names: resolved %d companies", len(names))
+        return names
+
+    def _company_names_v2(self) -> dict[str, str] | None:
+        """Try GET /v2/companies. Returns None on 404 (endpoint absent), {} on
+        other errors, dict on success."""
         names: dict[str, str] = {}
         try:
             url = PB_API + "/v2/companies?" + urllib.parse.urlencode(
@@ -233,13 +248,39 @@ class PBClient:
                     break
                 url = next_url
                 time.sleep(PAGINATION_DELAY)
+        except PBError as e:
+            if e.status == 404:
+                return None
+            log.warning("company_names: /v2/companies failed (%s)", e)
+            return {}
         except Exception as e:  # noqa: BLE001 — company names are nice-to-have
-            log.warning("company_names: could not fetch /v2/companies (%s) — "
-                        "municipality stats will be empty this run", e)
-            names = {}
+            log.warning("company_names: /v2/companies failed (%s)", e)
+            return {}
+        return names
 
-        self._company_names_cache = names
-        log.info("company_names: resolved %d companies", len(names))
+    def _company_names_v1(self) -> dict[str, str]:
+        """v1 /companies fallback (cursor pagination). Works until 2026-07-08."""
+        v1 = PBClient(token=self.token, ssl_verify=self.ssl_verify,
+                      patch_delay_seconds=0,
+                      timeout_seconds=self.timeout_seconds, api_version="v1")
+        names: dict[str, str] = {}
+        try:
+            params: dict[str, str | int] = {"pageLimit": 100}
+            while True:
+                _, payload = v1._request("GET", "/companies", params=params)
+                if payload is None:
+                    break
+                for c in payload.get("data", []) or []:
+                    if c.get("id") and c.get("name"):
+                        names[str(c["id"])] = c["name"]
+                cursor = payload.get("pageCursor")
+                if not cursor:
+                    break
+                params["pageCursor"] = cursor
+                time.sleep(PAGINATION_DELAY)
+        except Exception as e:  # noqa: BLE001
+            log.warning("company_names: v1 fallback failed (%s) — "
+                        "municipality stats will be empty this run", e)
         return names
 
     def fetch_unassigned(self) -> list[dict]:
@@ -261,10 +302,11 @@ class PBClient:
     def assign(self, note_uuid: str, owner_email: str) -> int:
         """PATCH a note to set its owner. Returns HTTP status."""
         if self.api_version == "v2":
-            # v2 supports two PATCH styles; we use the `fields` form — simpler,
-            # parallels v1's `data`-wrapped body. Alternative is patch-op style:
-            #   {"patch": [{"op": "set", "field": "owner", "value": {"email": ...}}]}
-            body = {"fields": {"owner": {"email": owner_email}}}
+            # v2 supports `fields` and patch-op styles; either way the body
+            # must be wrapped in a root `data` object — confirmed live
+            # 2026-06-11: unwrapped bodies get HTTP 400 "object at root is
+            # missing required properties: data".
+            body = {"data": {"fields": {"owner": {"email": owner_email}}}}
             path = f"/v2/notes/{note_uuid}"
         else:
             body = {"data": {"owner": {"email": owner_email}}}

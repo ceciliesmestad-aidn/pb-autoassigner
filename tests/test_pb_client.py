@@ -297,7 +297,7 @@ def test_assign_v2_sends_fields_wrapped_body_to_v2_notes_path():
     call = stub.calls[0]
     assert call["method"] == "PATCH"
     assert call["url"] == "https://api.productboard.com/v2/notes/v2-note-1"
-    assert call["body"] == {"fields": {"owner": {"email": "pm@aidn.no"}}}
+    assert call["body"] == {"data": {"fields": {"owner": {"email": "pm@aidn.no"}}}}
 
 
 # ─── verify_owner_emails: exercise both versions ──────────────────────────────
@@ -377,3 +377,24 @@ def test_flatten_v2_accepts_alternative_relationship_shapes():
 def test_flatten_v2_company_empty_without_map_or_relationship():
     assert pb_client.flatten_note(_v2_note_with_company())["company"] == ""
     assert pb_client.flatten_note(V2_NOTE_RAW, {"comp-9": "X"})["company"] == ""
+
+
+def test_company_names_falls_back_to_v1_when_v2_endpoint_missing():
+    c = PBClient(token="t", api_version="v2", patch_delay_seconds=0)
+
+    def handler(method, url, *, body=None):
+        if "/v2/companies" in url:
+            raise pb_client.PBError(404, "not found", url=url)
+        # v1 fallback path
+        assert "/companies" in url and "/v2/" not in url
+        return 200, {"data": [{"id": "c1", "name": "Oslo kommune"}], "pageCursor": None}
+
+    c._request_url = handler  # type: ignore[method-assign]
+    # The v1 sibling client created inside the fallback needs stubbing too —
+    # patch the class-level _request_url used by new instances.
+    orig = PBClient._request_url
+    PBClient._request_url = handler  # type: ignore[method-assign]
+    try:
+        assert c.company_names() == {"c1": "Oslo kommune"}
+    finally:
+        PBClient._request_url = orig  # type: ignore[method-assign]
