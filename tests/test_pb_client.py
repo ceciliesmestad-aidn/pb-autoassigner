@@ -314,3 +314,66 @@ def test_verify_owner_emails_counts_per_email():
 
     counts = pb_client.verify_owner_emails(c, ["pm@aidn.no", "other@aidn.no"])
     assert counts == {"pm@aidn.no": 3, "other@aidn.no": 0}
+
+
+# ─── company resolution (v2) ──────────────────────────────────────────────────
+
+
+def _v2_note_with_company(company_id="comp-9"):
+    import copy
+    raw = copy.deepcopy(V2_NOTE_RAW)
+    raw["relationships"] = {"data": [{"target": {"type": "company", "id": company_id}}]}
+    return raw
+
+
+def test_company_names_fetches_and_caches_v2():
+    c = PBClient(token="t", api_version="v2", patch_delay_seconds=0)
+    stub = StubHTTP([
+        (200, {"data": [{"id": "comp-9", "fields": {"name": "Bergen kommune"}}],
+               "links": {"next": None}}),
+    ])
+    stub.bind(c)
+    assert c.company_names() == {"comp-9": "Bergen kommune"}
+    # Second call must hit the cache, not the (now empty) stub queue.
+    assert c.company_names() == {"comp-9": "Bergen kommune"}
+    assert len(stub.calls) == 1
+    assert "/v2/companies" in stub.calls[0]["url"]
+
+
+def test_company_names_is_empty_on_v1_without_requests():
+    c = PBClient(token="t", api_version="v1", patch_delay_seconds=0)
+    stub = StubHTTP([])  # any request would raise
+    stub.bind(c)
+    assert c.company_names() == {}
+    assert stub.calls == []
+
+
+def test_company_names_degrades_to_empty_on_api_error():
+    c = PBClient(token="t", api_version="v2", patch_delay_seconds=0)
+
+    def boom(method, url, *, body=None):
+        raise pb_client.PBError(403, "missing scope", url=url)
+    c._request_url = boom  # type: ignore[method-assign]
+    assert c.company_names() == {}
+
+
+def test_flatten_v2_resolves_company_from_relationships():
+    names = {"comp-9": "Bergen kommune"}
+    flat = pb_client.flatten_note(_v2_note_with_company(), names)
+    assert flat["company"] == "Bergen kommune"
+
+
+def test_flatten_v2_accepts_alternative_relationship_shapes():
+    names = {"comp-9": "Bergen kommune"}
+    raw_flat_shape = _v2_note_with_company()
+    raw_flat_shape["relationships"] = {"data": [{"type": "company", "id": "comp-9"}]}
+    assert pb_client.flatten_note(raw_flat_shape, names)["company"] == "Bergen kommune"
+
+    raw_data_shape = _v2_note_with_company()
+    raw_data_shape["relationships"] = {"data": [{"data": {"type": "Company", "id": "comp-9"}}]}
+    assert pb_client.flatten_note(raw_data_shape, names)["company"] == "Bergen kommune"
+
+
+def test_flatten_v2_company_empty_without_map_or_relationship():
+    assert pb_client.flatten_note(_v2_note_with_company())["company"] == ""
+    assert pb_client.flatten_note(V2_NOTE_RAW, {"comp-9": "X"})["company"] == ""

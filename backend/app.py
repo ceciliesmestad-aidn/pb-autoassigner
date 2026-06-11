@@ -271,7 +271,7 @@ def _register_api(app: FastAPI) -> None:
                     patch_delay_seconds=cfg.productboard.patch_delay_seconds,
                     api_version=cfg.productboard.api_version,
                 )
-                client._request("GET", "/notes", params={"pageLimit": 1})
+                client._request("GET", client._notes_path(), params={"pageLimit": 1})
                 return {"ok": True}
             except Exception as e:
                 return {"ok": False, "error": str(e)[:300]}

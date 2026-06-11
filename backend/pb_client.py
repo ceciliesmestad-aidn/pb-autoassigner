@@ -66,6 +66,7 @@ class PBClient:
     def __post_init__(self) -> None:
         if self.api_version not in ("v1", "v2"):
             raise ValueError(f"unsupported api_version: {self.api_version!r} (expected 'v1' or 'v2')")
+        self._company_names_cache: dict[str, str] | None = None
 
     # ─── internals ────────────────────────────────────────────────────────────
 
@@ -176,6 +177,47 @@ class PBClient:
             url = next_url
             time.sleep(PAGINATION_DELAY)
 
+    def company_names(self) -> dict[str, str]:
+        """id → company name map, fetched once per client instance.
+
+        v2 notes no longer embed the company name — they reference a company id
+        under `relationships`. This map lets flatten_note() resolve the name.
+        Returns {} on v1 (name is embedded there) and on any API error, so the
+        Insights municipality stats degrade gracefully instead of crashing a run.
+        """
+        if self.api_version != "v2":
+            return {}
+        if self._company_names_cache is not None:
+            return self._company_names_cache
+
+        names: dict[str, str] = {}
+        try:
+            url = PB_API + "/v2/companies?" + urllib.parse.urlencode(
+                {"pageLimit": V2_PAGE_LIMIT})
+            while True:
+                _, payload = self._request_url("GET", url)
+                if payload is None:
+                    break
+                for c in payload.get("data", []) or []:
+                    cid = c.get("id") or ""
+                    # Accept both flat ({name}) and enveloped ({fields:{name}}) shapes.
+                    name = ((c.get("fields") or {}).get("name")) or c.get("name") or ""
+                    if cid and name:
+                        names[str(cid)] = name
+                next_url = ((payload.get("links") or {}).get("next")) or None
+                if not next_url:
+                    break
+                url = next_url
+                time.sleep(PAGINATION_DELAY)
+        except Exception as e:  # noqa: BLE001 — company names are nice-to-have
+            log.warning("company_names: could not fetch /v2/companies (%s) — "
+                        "municipality stats will be empty this run", e)
+            names = {}
+
+        self._company_names_cache = names
+        log.info("company_names: resolved %d companies", len(names))
+        return names
+
     def fetch_unassigned(self) -> list[dict]:
         """Return every note in the workspace with no owner.
 
@@ -227,15 +269,19 @@ def strip_html(text: str) -> str:
     return " ".join(text.split())
 
 
-def flatten_note(raw: dict) -> dict:
+def flatten_note(raw: dict, company_names: dict[str, str] | None = None) -> dict:
     """Convert a PB note JSON into the flat shape db.upsert_note() expects.
 
     Auto-detects v1 vs v2 by looking for the v2-specific `fields` envelope.
     Both versions produce the same output dict shape so downstream code
     (pipeline, insights, train) doesn't need to care which API emitted the raw.
+
+    `company_names` (id → name, from PBClient.company_names()) is only used on
+    v2, where the company is a relationship reference instead of an embedded
+    name. Omit it and `company` is simply empty for v2 notes.
     """
     if isinstance(raw.get("fields"), dict):
-        return _flatten_v2(raw)
+        return _flatten_v2(raw, company_names or {})
     return _flatten_v1(raw)
 
 
@@ -265,15 +311,31 @@ def _flatten_v1(raw: dict) -> dict:
     )
 
 
-def _flatten_v2(raw: dict) -> dict:
+def _company_id_from_relationships(raw: dict) -> str:
+    """Pull the company/customer reference id out of a v2 note, defensively.
+
+    The exact relationship item shape was not pinned down during Phase 0, so we
+    accept the plausible variants: {type: "company", id}, {target: {type:
+    "company", id}}, and {data: {type: "company", id}}. Returns "" when no
+    company reference exists.
+    """
+    rel = raw.get("relationships") or {}
+    items = rel.get("data") or []
+    if isinstance(items, dict):  # single-item shape
+        items = [items]
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        for node in (item, item.get("target") or {}, item.get("data") or {}):
+            if isinstance(node, dict) and "company" in str(node.get("type", "")).lower():
+                return str(node.get("id") or "")
+    return ""
+
+
+def _flatten_v2(raw: dict, company_names: dict[str, str]) -> dict:
     fields = raw.get("fields") or {}
     links = raw.get("links") or {}
     metadata = raw.get("metadata") or {}
-    # NOTE: v2 keeps the customer/company inside `relationships` as a reference
-    # (id + type + self-link) rather than embedding the name. Resolving a name
-    # from that reference needs a second call per unique customer — tracked as
-    # a follow-up. For now we leave `company` empty; the Insights top-muni
-    # chart will degrade gracefully (empty list) until the resolver lands.
 
     title = fields.get("name") or ""
     content_raw = fields.get("content") or ""
@@ -281,7 +343,13 @@ def _flatten_v2(raw: dict) -> dict:
 
     tags = _normalize_tags(fields.get("tags") or [])
 
-    company = ""  # TODO(v2): resolve from relationships.data[].target.id
+    # v2 references the company by id under `relationships`; resolve the name
+    # via the id→name map from PBClient.company_names(). Also accept an
+    # embedded company name if PB ever returns one in `fields`.
+    company = ((fields.get("company") or {}).get("name")
+               if isinstance(fields.get("company"), dict) else "") or ""
+    if not company:
+        company = company_names.get(_company_id_from_relationships(raw), "")
     source = ((metadata.get("source") or {}).get("system")) or ""
     display_url = links.get("self") or ""
     pb_created_at = raw.get("createdAt") or ""

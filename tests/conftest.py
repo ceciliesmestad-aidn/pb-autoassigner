@@ -79,6 +79,10 @@ class FakePBClient:
     def fetch_unassigned(self):
         return [n for n in self._notes if not n.get("owner")]
 
+    def company_names(self):
+        # Mirrors the real client on v1: names are embedded, the map is empty.
+        return {}
+
     def list_notes(self, *, owner_email=None):
         for n in self._notes:
             if owner_email is None or (n.get("owner") or {}).get("email") == owner_email:

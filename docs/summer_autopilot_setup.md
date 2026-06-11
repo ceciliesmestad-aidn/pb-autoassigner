@@ -30,16 +30,23 @@ webhook_url = "https://hooks.slack.com/services/PASTE-HERE"
 
 ⚠️ The webhook URL is a secret — anyone with it can post to the channel. Don't share it in Slack/email.
 
-## Step 2 — Test one live run on your Mac (~2 min)
+## Step 2 — Test one live run on your Mac (~5 min)
 
-In Terminal:
+The app was also migrated to Productboard's **v2 API** (v1 dies 8 July). This step verifies both that and the Slack digest. In Terminal:
 
 ```bash
 cd ~/Documents/Claude/Projects/PB/PB_assignerV2
+.venv/bin/python -m backend.cli verify-map
 .venv/bin/python -m backend.cli run
 ```
 
-Check: a digest appears in #productboard-assignment-alerts, and any assigned notes show the new owner in Productboard. **This run assigns for real.**
+Check:
+
+1. `verify-map` lists the PMs with note counts > 0 (proves v2 + email filter works)
+2. A digest appears in #productboard-assignment-alerts
+3. Any assigned notes show the new owner in Productboard — **this run assigns for real**
+
+If something errors, tell Claude — or as an emergency fallback open `config.toml` and set `api_version = "v2"` back to `"v1"` (works until 8 July).
 
 ## Step 3 — Put the repo on GitHub (~5 min)
 
@@ -47,17 +54,15 @@ You need a GitHub account (github.com — free, sign up with your Aidn email if 
 
 1. On github.com: **+** (top right) → **New repository**
    - Name: `pb-autoassigner` — Visibility: **Private** — don't add README/gitignore
-2. In Terminal (replace `YOUR-USERNAME`):
+2. In Terminal (replace `YOUR-USERNAME`) — everything is already committed, you only push:
 
 ```bash
 cd ~/Documents/Claude/Projects/PB/PB_assignerV2
-git add -A
-git commit -m "Slack notifications + GitHub Actions daily run, autopilot live"
 git remote add origin https://github.com/YOUR-USERNAME/pb-autoassigner.git
-git push -u origin main
+git push -u origin master
 ```
 
-(If git asks you to log in, follow the browser prompt. If `main` fails, try `git push -u origin master`.)
+(If git asks you to log in, follow the browser prompt.)
 
 Secrets are safe: `config.toml` (your keys) is gitignored and never uploaded.
 

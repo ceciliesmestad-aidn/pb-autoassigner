@@ -114,11 +114,12 @@ def compute_insights(
     # ── 1. Fetch PB notes ────────────────────────────────────────────────────
     notes: list[dict] = []
     try:
+        company_names = pb.company_names()  # v2: id→name map; v1: {}
         for raw in pb.list_notes(owner_email=pm_email):
             created = raw.get("createdAt") or raw.get("created_at") or ""
             if created and created < since_iso:
                 continue
-            notes.append(pb_mod.flatten_note(raw))
+            notes.append(pb_mod.flatten_note(raw, company_names))
     except Exception as e:
         log.warning("insights: PB fetch for %s failed: %s", pm_email, e)
         raise

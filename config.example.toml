@@ -8,6 +8,8 @@ token = ""
 ssl_verify = false
 # Rate-limit delay between PATCH calls, in seconds.
 patch_delay_seconds = 0.3
+# PB REST API version: "v2" (current) or "v1" (sunset 2026-07-08, fallback only).
+api_version = "v2"
 # Which PB REST API major version to talk. "v1" or "v2".
 # v1 is deprecated and sunsets 2026-07-08. Flip to "v2" once the v2 client has
 # been verified end-to-end on the live workspace. See docs/v2_migration_plan.md.

@@ -234,12 +234,13 @@ def _fetch_pb_notes_for_pm(pb, pm_email: str, since_iso: str) -> list[dict]:
     from . import pb_client as pb_mod
     try:
         notes = []
+        company_names = pb.company_names()  # v2: id→name map; v1: {}
         for raw in pb.list_notes(owner_email=pm_email):
             # PB API v1 uses camelCase; accept both spellings.
             created = raw.get("createdAt") or raw.get("created_at") or ""
             if created and created < since_iso:
                 continue  # PB returns newest-first; once we're past the window, skip
-            flat = pb_mod.flatten_note(raw)
+            flat = pb_mod.flatten_note(raw, company_names)
             notes.append(flat)
         return notes
     except Exception as e:

@@ -40,10 +40,11 @@ def ingest(
         raise
 
     log.info("ingest: PB returned %d unassigned notes; upserting…", len(raw_notes))
+    company_names = client.company_names()  # v2: id→name map; v1: {}
     currently_unassigned: set[str] = set()
     with db.transaction(conn):
         for raw in raw_notes:
-            flat = pb_client.flatten_note(raw)
+            flat = pb_client.flatten_note(raw, company_names)
             if not flat["pb_uuid"]:
                 continue
             currently_unassigned.add(flat["pb_uuid"])
