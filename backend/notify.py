@@ -59,7 +59,7 @@ def _post(cfg: Config, payload: dict) -> bool:
 
 def _note_line(n: dict) -> str:
     """One mrkdwn line for a note waiting for human review."""
-    title = (n.get("title") or "(uten tittel)").strip()
+    title = (n.get("title") or "(untitled)").strip()
     if len(title) > 90:
         title = title[:87] + "…"
     url = n.get("display_url") or ""
@@ -68,11 +68,11 @@ def _note_line(n: dict) -> str:
     pm = n.get("suggested_pm")
     conf = n.get("confidence")
     if pm and conf is not None:
-        why = f"forslag: {pm} ({conf:.2f} — under terskel)"
+        why = f"suggested: {pm} ({conf:.2f} — below threshold)"
     elif pm:
-        why = f"forslag: {pm}"
+        why = f"suggested: {pm}"
     else:
-        why = "ingen klar eier (leave open)"
+        why = "no clear owner (leave open)"
     return f"• {label} — {why}"
 
 
@@ -94,48 +94,48 @@ def send_run_report(
     new_notes = ingest_stats.get("inserted", 0)
 
     lines: list[str] = []
-    tag = " *(DRY-RUN — ingenting ble faktisk tildelt)*" if dry_run else ""
-    lines.append(f":robot_face: *PB AutoAssigner — daglig kjøring*{tag}")
+    tag = " *(DRY-RUN — nothing was actually assigned)*" if dry_run else ""
+    lines.append(f":robot_face: *PB AutoAssigner — daily run*{tag}")
 
     if new_notes == 0 and assigned == 0 and not needs_review:
-        lines.append("Ingen nye notater i dag. Alt er tildelt. :palm_tree:")
+        lines.append("No new notes today. Everything is assigned. :palm_tree:")
     else:
         lines.append(
-            f"Hentet *{new_notes}* nye notater, "
-            f"klassifiserte {classify_stats.get('classified', 0)}."
+            f"Fetched *{new_notes}* new note(s), "
+            f"classified {classify_stats.get('classified', 0)}."
         )
         if assigned:
             pm_bits = ", ".join(
                 f"{email.split('@')[0].replace('.', ' ').title()}: {count}"
                 for email, count in sorted(per_pm.items(), key=lambda kv: -kv[1])
             )
-            lines.append(f":white_check_mark: Tildelte *{assigned}* notater automatisk — {pm_bits}")
+            lines.append(f":white_check_mark: Auto-assigned *{assigned}* note(s) — {pm_bits}")
         elif new_notes:
-            lines.append(":white_check_mark: Ingen notater nådde tildelingsterskelen.")
+            lines.append(":white_check_mark: No notes reached the assignment threshold.")
 
     if needs_review:
         lines.append("")
         lines.append(
-            f":warning: *{len(needs_review)} notat(er) trenger et menneske* "
-            f"— åpne Reviewer-fanen når du er tilbake:"
+            f":warning: *{len(needs_review)} note(s) need a human* "
+            f"— open the Reviewer tab when you're back:"
         )
         for n in needs_review[:MAX_LISTED_NOTES]:
             lines.append(_note_line(n))
         if len(needs_review) > MAX_LISTED_NOTES:
-            lines.append(f"… og {len(needs_review) - MAX_LISTED_NOTES} til.")
+            lines.append(f"… and {len(needs_review) - MAX_LISTED_NOTES} more.")
 
     if cap_total:
         lines.append(
-            f":rotating_light: *Total-grensen ble utløst* ({cap_total} notater holdt tilbake). "
-            "Noe kan være galt med klassifiseringen — hele puljen venter på manuell gjennomgang."
+            f":rotating_light: *Total cap tripped* ({cap_total} notes held back). "
+            "Something may be wrong with classification — the whole batch awaits manual review."
         )
     if cap_pm:
         lines.append(
-            f":rotating_light: Per-PM-grensen ble nådd — {cap_pm} notat(er) satt i kø for gjennomgang."
+            f":rotating_light: Per-PM cap reached — {cap_pm} note(s) queued for review."
         )
     if errors:
         lines.append(
-            f":rotating_light: *{errors} tildeling(er) feilet* mot Productboard — sjekk loggen."
+            f":rotating_light: *{errors} assignment(s) FAILED* against Productboard — check the log."
         )
 
     return _post(cfg, {"text": "\n".join(lines)})
@@ -144,8 +144,8 @@ def send_run_report(
 def send_failure(cfg: Config, error: str) -> bool:
     """Alert the channel that the scheduled run itself crashed."""
     text = (
-        ":rotating_light: *PB AutoAssigner-kjøringen FEILET* — "
-        "notater blir IKKE tildelt før dette er fikset.\n"
+        ":rotating_light: *PB AutoAssigner run FAILED* — "
+        "notes are NOT being assigned until this is fixed.\n"
         f"```{error[:500]}```"
     )
     return _post(cfg, {"text": text})

@@ -66,12 +66,12 @@ def test_digest_lists_assignments_and_needs_review(cfg, captured):
     )
     assert ok is True
     text = captured[0]["text"]
-    assert "Tildelte *3* notater automatisk" in text
+    assert "Auto-assigned *3* note(s)" in text
     assert "Line Adde: 2" in text
-    assert "*2 notat(er) trenger et menneske*" in text
+    assert "*2 note(s) need a human*" in text
     assert "<https://aidn.productboard.com/notes/abc|Uklart notat om integrasjon>" in text
     assert "0.41" in text
-    assert "ingen klar eier" in text
+    assert "no clear owner" in text
     assert "DRY-RUN" not in text
 
 
@@ -94,7 +94,7 @@ def test_quiet_day_message(cfg, captured):
         autopilot_stats={"assigned": 0, "per_pm": {}, "dry_run": False},
         needs_review=[],
     )
-    assert "Ingen nye notater" in captured[0]["text"]
+    assert "No new notes today" in captured[0]["text"]
 
 
 def test_cap_tripwires_alert(cfg, captured):
@@ -112,7 +112,7 @@ def test_cap_tripwires_alert(cfg, captured):
         },
         needs_review=[],
     )
-    assert "Total-grensen ble utløst" in captured[0]["text"]
+    assert "Total cap tripped" in captured[0]["text"]
 
 
 def test_needs_review_truncates(cfg, captured):
@@ -128,13 +128,13 @@ def test_needs_review_truncates(cfg, captured):
         needs_review=many,
     )
     text = captured[0]["text"]
-    assert "og 5 til" in text
+    assert "and 5 more" in text
 
 
 def test_failure_message(cfg, captured):
     notify.send_failure(cfg, "RuntimeError: kaboom")
     text = captured[0]["text"]
-    assert "FEILET" in text
+    assert "FAILED" in text
     assert "kaboom" in text
 
 
