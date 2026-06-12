@@ -30,14 +30,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Restore note database from previous run
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v4.1
         with:
           path: data/pb_assigner.db
           key: pb-assigner-db-${{ github.run_id }}
@@ -58,7 +58,7 @@ jobs:
 
       - name: Save note database for next run
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v4.1
         with:
           path: data/pb_assigner.db
           key: pb-assigner-db-${{ github.run_id }}
