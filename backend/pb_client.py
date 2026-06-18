@@ -331,7 +331,7 @@ def _is_empty_draft(raw: dict) -> bool:
     considered a draft.
     """
     fields = raw.get("fields") or {}
-    content = (fields.get("content") or "").strip()
+    content = _coerce_content(fields.get("content")).strip()
     name = (fields.get("name") or "").strip()
     return not content and name in ("", "New note")
 
@@ -347,6 +347,25 @@ class PBError(Exception):
 # ─── flatten + hash helpers ───────────────────────────────────────────────────
 
 _TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _coerce_content(value) -> str:
+    """Return a plain string from a PB content field.
+
+    PB API v2 sometimes returns `content` as a list of Tiptap/ProseMirror
+    content-block dicts instead of an HTML string.  Calling .strip() on a list
+    raises AttributeError, which broke the daily GitHub Actions run on 2026-06-18.
+    This helper converts any non-string value to its JSON representation so the
+    rest of the pipeline can treat it as a string (strip_html will remove markup).
+    """
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        import json as _json
+        return _json.dumps(value)
+    return str(value)
 
 
 def strip_html(text: str) -> str:
@@ -426,7 +445,7 @@ def _flatten_v2(raw: dict, company_names: dict[str, str]) -> dict:
     metadata = raw.get("metadata") or {}
 
     title = fields.get("name") or ""
-    content_raw = fields.get("content") or ""
+    content_raw = _coerce_content(fields.get("content"))
     content_clean = strip_html(content_raw)
 
     tags = _normalize_tags(fields.get("tags") or [])
