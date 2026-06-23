@@ -153,6 +153,7 @@ def _register_api(app: FastAPI) -> None:
             ssl_verify=pb.ssl_verify,
             patch_delay_seconds=pb.patch_delay_seconds,
             api_version=pb.api_version,
+            workspace=pb.workspace,
         )
 
     @app.get("/api/health")
@@ -270,6 +271,7 @@ def _register_api(app: FastAPI) -> None:
                     ssl_verify=cfg.productboard.ssl_verify,
                     patch_delay_seconds=cfg.productboard.patch_delay_seconds,
                     api_version=cfg.productboard.api_version,
+                    workspace=cfg.productboard.workspace,
                 )
                 client._request("GET", client._notes_path(), params={"pageLimit": 1})
                 return {"ok": True}

@@ -65,6 +65,9 @@ class PBClient:
     # timeout + GET retries (see _request_url) handle that.
     timeout_seconds: int = 90
     api_version: str = "v1"  # "v1" or "v2"
+    # Productboard workspace subdomain (e.g. "aidn" → aidn.productboard.com).
+    # Used to build UI links for Slack notifications; v2 only returns API URLs.
+    workspace: str = ""
 
     def __post_init__(self) -> None:
         if self.api_version not in ("v1", "v2"):
@@ -376,7 +379,8 @@ def strip_html(text: str) -> str:
     return " ".join(text.split())
 
 
-def flatten_note(raw: dict, company_names: dict[str, str] | None = None) -> dict:
+def flatten_note(raw: dict, company_names: dict[str, str] | None = None,
+                 workspace: str = "") -> dict:
     """Convert a PB note JSON into the flat shape db.upsert_note() expects.
 
     Auto-detects v1 vs v2 by looking for the v2-specific `fields` envelope.
@@ -386,9 +390,12 @@ def flatten_note(raw: dict, company_names: dict[str, str] | None = None) -> dict
     `company_names` (id → name, from PBClient.company_names()) is only used on
     v2, where the company is a relationship reference instead of an embedded
     name. Omit it and `company` is simply empty for v2 notes.
+
+    `workspace` is the Productboard subdomain (e.g. "aidn") used to build a
+    proper UI link for v2 notes, which only carry an API URL in links.self.
     """
     if isinstance(raw.get("fields"), dict):
-        return _flatten_v2(raw, company_names or {})
+        return _flatten_v2(raw, company_names or {}, workspace=workspace)
     return _flatten_v1(raw)
 
 
@@ -439,7 +446,8 @@ def _company_id_from_relationships(raw: dict) -> str:
     return ""
 
 
-def _flatten_v2(raw: dict, company_names: dict[str, str]) -> dict:
+def _flatten_v2(raw: dict, company_names: dict[str, str],
+                workspace: str = "") -> dict:
     fields = raw.get("fields") or {}
     links = raw.get("links") or {}
     metadata = raw.get("metadata") or {}
@@ -458,7 +466,16 @@ def _flatten_v2(raw: dict, company_names: dict[str, str]) -> dict:
     if not company:
         company = company_names.get(_company_id_from_relationships(raw), "")
     source = ((metadata.get("source") or {}).get("system")) or ""
-    display_url = links.get("self") or ""
+
+    # The v2 API puts the REST endpoint URL in links.self (api.productboard.com/…),
+    # which is not a valid browser link. Build the UI link instead when we know
+    # the workspace subdomain; fall back to the API URL only if workspace is unset.
+    note_id = raw.get("id") or ""
+    if workspace and note_id:
+        display_url = f"https://{workspace}.productboard.com/notes/{note_id}"
+    else:
+        display_url = links.get("self") or ""
+
     pb_created_at = raw.get("createdAt") or ""
 
     return _assemble_flat(

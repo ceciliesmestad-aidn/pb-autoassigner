@@ -194,6 +194,7 @@ def _pb_or_die(cfg) -> pb_client.PBClient:
         ssl_verify=cfg.productboard.ssl_verify,
         patch_delay_seconds=cfg.productboard.patch_delay_seconds,
         api_version=cfg.productboard.api_version,
+        workspace=cfg.productboard.workspace,
     )
 
 

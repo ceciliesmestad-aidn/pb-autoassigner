@@ -44,7 +44,8 @@ def ingest(
     currently_unassigned: set[str] = set()
     with db.transaction(conn):
         for raw in raw_notes:
-            flat = pb_client.flatten_note(raw, company_names)
+            flat = pb_client.flatten_note(raw, company_names,
+                                           workspace=client.workspace)
             if not flat["pb_uuid"]:
                 continue
             currently_unassigned.add(flat["pb_uuid"])

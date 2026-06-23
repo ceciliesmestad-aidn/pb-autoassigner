@@ -22,6 +22,10 @@ class ProductboardConfig:
     # See docs/v2_migration_plan.md for the diff. Keep "v1" as the default until
     # v2 has been verified end-to-end on the live workspace, then flip.
     api_version: str = "v1"
+    # Productboard workspace subdomain (e.g. "aidn" → aidn.productboard.com).
+    # Used to build UI links for Slack notifications when the v2 API only returns
+    # an api.productboard.com URL in links.self.
+    workspace: str = ""
 
 
 @dataclass

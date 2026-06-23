@@ -8,6 +8,7 @@ token = ""              # from env PB_TOKEN
 ssl_verify = true       # no corporate proxy in GitHub's cloud
 patch_delay_seconds = 0.3
 api_version = "v2"      # v1 sunsets 2026-07-08
+workspace = "aidn"      # used to build UI links in Slack notifications
 
 [anthropic]
 api_key = ""            # from env ANTHROPIC_API_KEY
