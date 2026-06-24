@@ -472,7 +472,7 @@ def _flatten_v2(raw: dict, company_names: dict[str, str],
     # the workspace subdomain; fall back to the API URL only if workspace is unset.
     note_id = raw.get("id") or ""
     if workspace and note_id:
-        display_url = f"https://{workspace}.productboard.com/notes/{note_id}"
+        display_url = f"https://{workspace}.productboard.com/insights/feedback?d=notes%2F{note_id}"
     else:
         display_url = links.get("self") or ""
 
