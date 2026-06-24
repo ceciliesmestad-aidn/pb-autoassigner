@@ -467,13 +467,15 @@ def _flatten_v2(raw: dict, company_names: dict[str, str],
         company = company_names.get(_company_id_from_relationships(raw), "")
     source = ((metadata.get("source") or {}).get("system")) or ""
 
-    # The v2 API puts the REST endpoint URL in links.self (api.productboard.com/…),
-    # which is not a valid browser link. Build the UI link instead when we know
-    # the workspace subdomain; fall back to the API URL only if workspace is unset.
+    # Build the best browser-navigable URL we can.
+    # Priority 1: displayUrl returned by PB (contains the numeric note ID the UI needs).
+    # Priority 2: construct from workspace + UUID (works if PB accepts UUID deep links).
+    # Priority 3: fall back to the API URL from links.self (not clickable in a browser).
     note_id = raw.get("id") or ""
-    if workspace and note_id:
+    display_url = (raw.get("displayUrl") or raw.get("display_url") or "")
+    if not display_url and workspace and note_id:
         display_url = f"https://{workspace}.productboard.com/insights/feedback?d=notes%2F{note_id}"
-    else:
+    if not display_url:
         display_url = links.get("self") or ""
 
     pb_created_at = raw.get("createdAt") or ""

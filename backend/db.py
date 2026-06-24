@@ -165,7 +165,16 @@ def upsert_note(conn: sqlite3.Connection, note: dict) -> tuple[int, bool]:
         )
         return cur.lastrowid, True
 
-    # Note existed; update only if content_hash changed (title/content edits in PB).
+    # Always refresh display_url — the URL format changes as PB migrates
+    # (v1→v2, all-notes→insights/feedback, numeric→uuid deep links).
+    # For all other fields, only update when content_hash changed.
+    new_url = note.get("display_url", "")
+    if new_url:
+        conn.execute(
+            "UPDATE notes SET display_url = ? WHERE id = ?",
+            (new_url, existing["id"]),
+        )
+
     if existing["content_hash"] != note["content_hash"]:
         conn.execute(
             """
