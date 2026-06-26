@@ -336,7 +336,7 @@ def _is_empty_draft(raw: dict) -> bool:
     fields = raw.get("fields") or {}
     content = _coerce_content(fields.get("content")).strip()
     name = (fields.get("name") or "").strip()
-    return not content and name in ("", "New note")
+    return not content and name in ("", "New note", "New feedback")
 
 
 class PBError(Exception):
