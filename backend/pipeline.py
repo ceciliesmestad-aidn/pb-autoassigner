@@ -62,7 +62,7 @@ def ingest(
         # in sync with PB's live state.
         reconciled = 0
         stale_rows = conn.execute(
-            "SELECT id, pb_uuid FROM notes WHERE state IN ('new', 'suggested')"
+            "SELECT id, pb_uuid FROM notes WHERE state IN ('new', 'suggested', 'pending_review')"
         ).fetchall()
         for row in stale_rows:
             if row["pb_uuid"] not in currently_unassigned:

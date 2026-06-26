@@ -469,12 +469,13 @@ def _flatten_v2(raw: dict, company_names: dict[str, str],
 
     # Build the best browser-navigable URL we can.
     # Priority 1: displayUrl returned by PB (contains the numeric note ID the UI needs).
-    # Priority 2: construct from workspace + UUID (works if PB accepts UUID deep links).
+    #             PB v1 returned this; v2 does not appear to include it.
+    # Priority 2: workspace feedback page (no deep link — PB rejects UUID in ?d= param).
     # Priority 3: fall back to the API URL from links.self (not clickable in a browser).
     note_id = raw.get("id") or ""
     display_url = (raw.get("displayUrl") or raw.get("display_url") or "")
-    if not display_url and workspace and note_id:
-        display_url = f"https://{workspace}.productboard.com/insights/feedback?d=notes%2F{note_id}"
+    if not display_url and workspace:
+        display_url = f"https://{workspace}.productboard.com/insights/feedback"
     if not display_url:
         display_url = links.get("self") or ""
 
