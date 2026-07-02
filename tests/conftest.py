@@ -75,6 +75,9 @@ class FakePBClient:
         self._notes = copy.deepcopy(list(notes or SAMPLE_PB_NOTES))
         self.patches: list[tuple[str, str]] = []
         self.patch_delay_seconds = 0.0
+        # Mirror the real PBClient's attributes used by pipeline.ingest().
+        self.api_version = "v1"
+        self.workspace = ""
 
     def fetch_unassigned(self):
         return [n for n in self._notes if not n.get("owner")]

@@ -41,11 +41,16 @@ def ingest(
 
     log.info("ingest: PB returned %d unassigned notes; upserting…", len(raw_notes))
     company_names = client.company_names()  # v2: id→name map; v1: {}
+    # Deep links come straight from the v2 response (links.html, added by PB
+    # 2026-04-30) — no v1 lookup needed anymore. The display_urls map is kept
+    # only as a (now empty) legacy fallback argument.
+    display_urls: dict[str, str] = {}
     currently_unassigned: set[str] = set()
     with db.transaction(conn):
         for raw in raw_notes:
             flat = pb_client.flatten_note(raw, company_names,
-                                           workspace=client.workspace)
+                                           workspace=client.workspace,
+                                           display_urls=display_urls)
             if not flat["pb_uuid"]:
                 continue
             currently_unassigned.add(flat["pb_uuid"])

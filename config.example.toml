@@ -2,6 +2,7 @@
 # Copy to config.toml and fill in. config.toml is gitignored.
 
 [productboard]
+workspace = "aidn"      # PB subdomain, used for fallback UI links
 # PB API token. Also honoured via env var PB_TOKEN.
 token = ""
 # Disable SSL verification (needed behind Aidn corporate proxy).

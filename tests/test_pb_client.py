@@ -53,7 +53,11 @@ V2_NOTE_RAW = {
         "archived": False,
         "processed": True,
     },
-    "links": {"self": "https://api.productboard.com/v2/notes/v2-note-1"},
+    "links": {
+        "self": "https://api.productboard.com/v2/notes/v2-note-1",
+        # PB added UI deep links to v2 note responses on 2026-04-30.
+        "html": "https://aidn.productboard.com/insights/feedback?d=notes%2F56321298",
+    },
     "relationships": {"data": [], "links": {"next": None}},
     "metadata": {"source": {"system": "slack", "recordId": "abc123"}},
 }
@@ -106,9 +110,22 @@ def test_flatten_note_detects_v2():
     # v2 does not embed company name — see TODO in _flatten_v2.
     assert flat["company"] == ""
     assert flat["source"] == "slack"
-    assert flat["display_url"] == "https://api.productboard.com/v2/notes/v2-note-1"
+    # links.html (UI deep link) wins over links.self (API URL).
+    assert flat["display_url"] == "https://aidn.productboard.com/insights/feedback?d=notes%2F56321298"
     assert flat["pb_created_at"] == "2026-04-10T08:15:00Z"
     assert flat["raw"] is V2_NOTE_RAW
+
+
+def test_flatten_note_v2_falls_back_without_html_link():
+    """If PB ever omits links.html, degrade gracefully: workspace page if
+    known, otherwise the links.self API URL."""
+    import copy
+    raw = copy.deepcopy(V2_NOTE_RAW)
+    del raw["links"]["html"]
+    assert (flatten_note(raw)["display_url"]
+            == "https://api.productboard.com/v2/notes/v2-note-1")
+    assert (flatten_note(raw, workspace="aidn")["display_url"]
+            == "https://aidn.productboard.com/insights/feedback")
 
 
 def test_flatten_note_produces_identical_shape_across_versions():
@@ -391,9 +408,10 @@ def test_company_names_falls_back_to_v1_when_v2_endpoint_missing():
 
     c._request_url = handler  # type: ignore[method-assign]
     # The v1 sibling client created inside the fallback needs stubbing too —
-    # patch the class-level _request_url used by new instances.
+    # patch the class-level _request_url used by new instances. staticmethod()
+    # stops Python from prepending `self` when instances call it.
     orig = PBClient._request_url
-    PBClient._request_url = handler  # type: ignore[method-assign]
+    PBClient._request_url = staticmethod(handler)  # type: ignore[method-assign]
     try:
         assert c.company_names() == {"c1": "Oslo kommune"}
     finally:

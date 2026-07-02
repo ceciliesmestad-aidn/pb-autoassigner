@@ -380,7 +380,8 @@ def strip_html(text: str) -> str:
 
 
 def flatten_note(raw: dict, company_names: dict[str, str] | None = None,
-                 workspace: str = "") -> dict:
+                 workspace: str = "",
+                 display_urls: dict[str, str] | None = None) -> dict:
     """Convert a PB note JSON into the flat shape db.upsert_note() expects.
 
     Auto-detects v1 vs v2 by looking for the v2-specific `fields` envelope.
@@ -395,7 +396,8 @@ def flatten_note(raw: dict, company_names: dict[str, str] | None = None,
     proper UI link for v2 notes, which only carry an API URL in links.self.
     """
     if isinstance(raw.get("fields"), dict):
-        return _flatten_v2(raw, company_names or {}, workspace=workspace)
+        return _flatten_v2(raw, company_names or {}, workspace=workspace,
+                           display_urls=display_urls or {})
     return _flatten_v1(raw)
 
 
@@ -447,7 +449,8 @@ def _company_id_from_relationships(raw: dict) -> str:
 
 
 def _flatten_v2(raw: dict, company_names: dict[str, str],
-                workspace: str = "") -> dict:
+                workspace: str = "",
+                display_urls: dict[str, str] | None = None) -> dict:
     fields = raw.get("fields") or {}
     links = raw.get("links") or {}
     metadata = raw.get("metadata") or {}
@@ -468,16 +471,20 @@ def _flatten_v2(raw: dict, company_names: dict[str, str],
     source = ((metadata.get("source") or {}).get("system")) or ""
 
     # Build the best browser-navigable URL we can.
-    # Priority 1: displayUrl returned by PB (contains the numeric note ID the UI needs).
-    #             PB v1 returned this; v2 does not appear to include it.
-    # Priority 2: workspace feedback page (no deep link — PB rejects UUID in ?d= param).
-    # Priority 3: fall back to the API URL from links.self (not clickable in a browser).
+    # Priority 1: links.html — exact UI deep link, added to v2 note responses
+    #             by PB on 2026-04-30 (see developer.productboard.com/changelog).
+    # Priority 2: v1 display_urls map (legacy — dead after the v1 sunset 2026-07-08).
+    # Priority 3: displayUrl in the v2 response (PB may add this in future).
+    # Priority 4: workspace All Feedback page (no deep link, but at least clickable).
+    # Priority 5: links.self API URL (not clickable in a browser).
     note_id = raw.get("id") or ""
-    display_url = (raw.get("displayUrl") or raw.get("display_url") or "")
-    if not display_url and workspace:
-        display_url = f"https://{workspace}.productboard.com/insights/feedback"
-    if not display_url:
-        display_url = links.get("self") or ""
+    display_url = (
+        links.get("html")
+        or (display_urls or {}).get(note_id)
+        or raw.get("displayUrl") or raw.get("display_url")
+        or (f"https://{workspace}.productboard.com/insights/feedback" if workspace else "")
+        or links.get("self") or ""
+    )
 
     pb_created_at = raw.get("createdAt") or ""
 
