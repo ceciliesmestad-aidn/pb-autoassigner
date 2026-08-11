@@ -37,6 +37,7 @@ includes:
   - Oversikt og lister over tjenestemottakere / pasienter
 
 excludes:
+  - Egne notater / notatblokk / huskelapp (utenfor journal)  → Cathrine (Product Leadership)
   - Saksbehandling, vedtak, tjenestetildeling  → Kristin (Case Handling)
   - Legemiddelkurve-spesifikt                  → Sandra (Treatment)
   - Meldinger, e-meldinger, PLO, sporbarhet    → Hanne (Messaging)
@@ -67,6 +68,10 @@ keywords_strong:
   - velferdsteknologi
 
 disambiguations:
+  - term: notat
+    route_here_when: [journal, journalnotat, sykepleie, dokumentasjon, pasient]
+    route_elsewhere_when:
+      - egne notater, notatblokk, huskelapp, personlig → cathrine.stenstadvold@aidn.no (Product Leadership)
   - term: rapport
     route_here_when: [natt, sykepleier, vakt, avdeling, overlevering]
     route_elsewhere_when:

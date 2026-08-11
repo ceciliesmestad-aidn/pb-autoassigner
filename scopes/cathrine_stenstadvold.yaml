@@ -1,0 +1,44 @@
+# Scope: Cathrine Stenstadvold — Product Leadership
+# Notes are in Norwegian (may contain English terms). Do not translate.
+# Opprettet 2026-08-11: Cathrine samler innsikt om notatblokk-konseptet.
+
+pm_email: cathrine.stenstadvold@aidn.no
+pm_name: Cathrine Stenstadvold
+team: Product Leadership
+
+description_no: |
+  Cathrine samler innsikt og forslag rundt notatblokk-konseptet: ansattes
+  egne, uformelle notater i Aidn — huskelapper, personlige notater og
+  notatblokk-funksjonalitet. Dette er notater som IKKE er en del av
+  pasientjournalen (journalnotat/sykepleienotat hører til Line, Team CPR).
+  Temaet har kommet inn i flere varianter og skal samles hos Cathrine.
+
+includes:
+  - Notatblokk / notatblokk-funksjonalitet
+  - Egne notater / personlige notater (utenfor journal)
+  - Huskelapp / huskelapper / huskeliste for ansatte
+  - Kladd / kladdeblokk for egne arbeidsnotater
+  - Forslag om å kunne notere fritt uten å dokumentere i journal
+
+excludes:
+  - Journalnotat / dokumentasjon i pasientjournal   → Line (Team CPR)
+  - Sykepleienotat / journalføring av behandling    → Line (Team CPR) / Sandra (Treatment)
+  - Beskjeder og internmeldinger til andre          → Hanne (Team Messaging)
+  - Arbeidslister / oppgavelister i vakta           → vurder Team Back Office
+
+keywords_strong:
+  - notatblokk
+  - egne notater
+  - huskelapp
+  - huskelapper
+  - huskeliste
+  - personlige notater
+  - personlig notat
+  - kladdeblokk
+
+disambiguations:
+  - term: notat
+    route_here_when: [egne, personlig, privat, huskelapp, notatblokk, kladd, "uten journal"]
+    route_elsewhere_when:
+      - journalnotat, journalføring, dokumentasjon i journal → line.adde@aidn.no (Team CPR)
+      - sykepleienotat → line.adde@aidn.no (Team CPR)
