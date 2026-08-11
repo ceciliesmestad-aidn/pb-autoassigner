@@ -17,11 +17,10 @@ class ProductboardConfig:
     token: str = ""
     ssl_verify: bool = False
     patch_delay_seconds: float = 0.3
-    # Which PB REST API major version to talk. "v1" (default) and "v2" are both
-    # supported during the v1→v2 migration window (v1 sunset: 2026-07-08).
-    # See docs/v2_migration_plan.md for the diff. Keep "v1" as the default until
-    # v2 has been verified end-to-end on the live workspace, then flip.
-    api_version: str = "v1"
+    # Which PB REST API major version to talk. v1 was retired by Productboard
+    # on 2026-07-08 (calls return HTTP 410), so "v2" is the only working value —
+    # and the default, so a config.toml without api_version keeps working.
+    api_version: str = "v2"
     # Productboard workspace subdomain (e.g. "aidn" → aidn.productboard.com).
     # Used to build UI links for Slack notifications when the v2 API only returns
     # an api.productboard.com URL in links.self.
