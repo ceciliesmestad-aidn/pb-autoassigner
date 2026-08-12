@@ -340,6 +340,23 @@ class PBClient:
         time.sleep(self.patch_delay_seconds)
         return status
 
+    def remove_tags(self, note_uuid: str, tags: list[str]) -> int:
+        """Remove tags from a note (v2 patch op `removeItems`; idempotent).
+
+        Used when reassigning notes between teams, to swap the old team tag
+        for the new one. Returns HTTP status.
+        """
+        if self.api_version != "v2":
+            raise PBError(400, "remove_tags requires api_version v2", url="")
+        body = {"data": {"patch": [{
+            "op": "removeItems",
+            "path": "tags",
+            "value": [{"name": t} for t in tags if t],
+        }]}}
+        status, _ = self._request("PATCH", f"/v2/notes/{note_uuid}", body=body)
+        time.sleep(self.patch_delay_seconds)
+        return status
+
 
 def _is_empty_draft(raw: dict) -> bool:
     """True for abandoned '+ Note' drafts: no content and no real title.
