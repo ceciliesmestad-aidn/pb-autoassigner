@@ -8,7 +8,7 @@ This file is read by Claude Code at the start of every session. It covers everyt
 
 Pulls unassigned notes from Productboard, uses Claude (Haiku + Sonnet) to suggest which PM should own each note based on per-PM scope documents, and shows the suggestions in a review UI. A human confirms each assignment before it's pushed back to Productboard. No autopilot — every assignment is intentional.
 
-**PMs currently in the system:** Line Adde (CPR), Sandra Otteraaen (Treatment), Kristin Shovick (Case Handling), Hanne Linaae (Messaging), Erik Story (Patient), Jens Malm (Back Office), Abraham Guzman (IAM), Ashild Herdlevaer (Collaboration), Sally Renshaw (Design System), Therese Borter (Navigator), Viktor Ernholm (Mobile App), Fredrik Behn (OpenAIdn).
+**PMs currently in the system (updated 2026-08-12):** Line Adde (CPR), Sandra Otteraaen (Treatment), Kristin Shovick (Case Handling), Hanne Linaae (Messaging), Erik Story (AI & Automation), Fredrik Pedersen (Patient), Jens Malm (Back Office — economy/plassadmin/hjelpemidler only), Abraham Guzman (IAM), Ashild Herdlevaer (Collaboration), Sally Renshaw (Design System), Therese Borter (Navigator), Viktor Ernholm (Mobile App), Fredrik Behn (OpenAIdn), plus custom PMs in `pms_custom.json`: Cathrine Stenstadvold (Product Leadership — notatblokk/egne notater/huskelapp), Séamus Beirne (Data & Analytics — all rapportering/analyse/statistikk/KOSTRA/Aidn Analytics, moved from Jens 2026-08-12), Adil Rashid (Health Station — helsestasjon/skolehelsetjeneste, piloting).
 
 ---
 

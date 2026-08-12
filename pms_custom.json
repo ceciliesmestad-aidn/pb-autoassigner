@@ -4,5 +4,17 @@
     "name": "Cathrine Stenstadvold",
     "team": "Product Leadership",
     "scope_file": "cathrine_stenstadvold"
+  },
+  {
+    "email": "seamus.beirne@aidn.no",
+    "name": "Séamus Beirne",
+    "team": "Team Data & Analytics",
+    "scope_file": "seamus_beirne"
+  },
+  {
+    "email": "adil.rashid@aidn.no",
+    "name": "Adil Rashid",
+    "team": "Team Health Station",
+    "scope_file": "adil_rashid"
   }
 ]

@@ -1,0 +1,78 @@
+# Scope: Séamus Beirne — Team Data & Analytics
+# Notes are in Norwegian (may contain English terms). Do not translate.
+# Opprettet 2026-08-12 basert på teamets Notion HQ (Mission, scope and operating model).
+# Analytics/rapportering flyttet hit fra Jens (Back Office) samme dato.
+
+pm_email: seamus.beirne@aidn.no
+pm_name: Séamus Beirne
+team: Team Data & Analytics
+
+description_no: |
+  Séamus eier den delte dataplattformen og hele Aidn Analytics-opplevelsen:
+  rapportering, dashboards, selvbetjent utforsking, dataeksport/uttrekk og
+  KI-assistert/conversational analytics. Teamet leverer også ledelsesrapportering
+  for kommunene, budsjettdata og nasjonal rapportering (KOSTRA, KPR, IPLOS).
+  "Domene over teknologi": en sak om rapport/analyse/styringsinformasjon hører
+  hjemme her selv om teknologien er AI (f.eks. KI-agent i Aidn Analytics).
+
+includes:
+  - Aidn Analytics (alle flater og brukeropplevelsen)
+  - Rapportering, rapportbygger, egne rapporter, filtrering, tidsperiode
+  - Dashboards og visualisering
+  - Statistikk og styringsinformasjon for ledelse
+  - KOSTRA-rapportering og sammenligning mellom kommuner
+  - KPR-rapportering / IPLOS-statistikk (nasjonal rapportering)
+  - Budsjettdata og ledelsesrapportering
+  - Power BI / PowerBI
+  - Dataeksport, uttrekk, selvbetjent utforsking av data
+  - KI-agent / conversational analytics i analysekontekst
+  - Dataplattform, datavarehus, datakvalitet og tilgangsstyring for analysedata
+  - Statistikk / rapportuttrekk på vedtak og tjenester
+
+excludes:
+  - Faktura, egenbetaling, økonomiintegrasjoner       → Jens (Back Office)
+  - Plassadministrasjon, hjelpemidler                 → Jens (Back Office)
+  - Rapport i sykepleie-/vakt-kontekst (overlevering) → Line (CPR)
+  - KI/automatisering utenfor analysekontekst         → Erik (AI & Automation)
+
+tag_routes:
+  - "team data & analytics"
+  - "team data and analytics"
+
+keywords_strong:
+  - aidn analytics
+  - rapportering
+  - rapportbygger
+  - dashboard
+  - statistikk
+  - styringsinformasjon
+  - kostra
+  - kpr
+  - iplos
+  - powerbi
+  - power bi
+  - dataeksport
+  - uttrekk
+  - budsjettdata
+  - ledelsesrapport
+  - datavarehus
+  - dataplattform
+
+disambiguations:
+  - term: rapport
+    route_here_when: [kostra, statistikk, filtrer, ta ut, egne rapport, tidsperiode,
+                      powerbi, power bi, styringsinformasjon, aidn analytics,
+                      dashboard, sammenligning, ledelse, budsjett]
+    route_elsewhere_when:
+      - natt, sykepleie, vakt, avdeling, overlevering → line.adde@aidn.no (CPR)
+      - fakturagrunnlag, egenbetaling → jens.malm@aidn.no (Back Office)
+  - term: analyse
+    route_here_when: [data, rapport, statistikk, dashboard, styring]
+  - term: KI / AI
+    route_here_when: [analytics, rapport, analyse, dashboard, innsikt i data]
+    route_elsewhere_when:
+      - automatisering av arbeidsflyt, KI i journal → erik.story@aidn.no (AI & Automation)
+
+hard_negatives:
+  - "rapportskjema i sykepleie/vakt-kontekst → CPR/Line"
+  - "faktura-/økonomisaker med rapportvinkel → Jens (Back Office) hvis økonomi er kjernen"

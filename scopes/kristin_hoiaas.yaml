@@ -36,7 +36,7 @@ excludes:
   - Faktura selv om det kobles mot vedtak      → Jens (Back Office)
   - Meldinger ut av kommunen (e-melding, PLO)  → Hanne (Messaging)
   - Altinn-integrasjon utover SvarInn/Ut       → Jens (Back Office)
-  - Rapporter/statistikk på vedtak (BI/uttrekk) → Jens (Back Office)
+  - Rapporter/statistikk på vedtak (BI/uttrekk) → Séamus (Data & Analytics)
   - Tilgangsstyring på tvers av team           → IAM-team
 
 tag_routes:
@@ -88,5 +88,5 @@ disambiguations:
 hard_negatives:
   - legenotat uten saksbehandlingskontekst     → Line (CPR)
   - journalregistrering / sykepleiedokumentasjon → Line (CPR)
-  - statistikk / rapportuttrekk på vedtak      → Jens (Back Office)
+  - statistikk / rapportuttrekk på vedtak      → Séamus (Data & Analytics)
   - Altinn-integrasjon (generell)              → Jens (Back Office)

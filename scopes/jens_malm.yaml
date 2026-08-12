@@ -1,39 +1,39 @@
 # Scope: Jens Aga Malm — Team Back Office
 # Notes are in Norwegian (may contain English terms). Do not translate.
+# 2026-08-12: Rapportering/analyse/statistikk/KOSTRA/Power BI/Aidn Analytics
+# flyttet til Séamus Beirne (Team Data & Analytics). Jens beholder økonomi,
+# plassadministrasjon og hjelpemidler.
 
 pm_email: jens.malm@aidn.no
 pm_name: Jens Aga Malm
 team: Team Back Office
 
 description_no: |
-  Jens eier back-office: økonomi, faktura, arbeidsflyter for administrasjon,
-  rapportering/analyse, KOSTRA, statistikk, styringsinformasjon, Power BI.
+  Jens eier back-office: økonomi, faktura, arbeidsflyter for administrasjon.
   Inkluderer også plassadministrasjon (sengeoversikt, rom, belegg, institusjon),
   egenbetaling/egenandel, hjelpemidler (KS Hjelpemidler-integrasjon),
   og økonomiintegrasjoner (Xledger, Helfo, NAV-trekklister).
-  "Domene over teknologi": en rapport-sak tilhører her hvis den handler om
-  analyse/styring, selv om teknologien er AI (f.eks. Aidn Analytics, KI-agent).
+  Rapportering, analyse, statistikk og Aidn Analytics eies av Séamus
+  (Team Data & Analytics) — Jens har kun rapport-saker der økonomi er kjernen
+  (f.eks. fakturagrunnlag, refusjon).
 
 includes:
   - Faktura, fakturering, fakturaflyt, fakturagrunnlag, kreditering
   - Egenbetaling, egenandel, egenandelsgrunnlag, ligningstall, bofradrag, kurdøgnpris
   - Etteroppgjør, kontrolloppgjør, trekklister fra NAV
   - Arbeidsflyter for administrasjon (kombinert med faktura → Jens)
-  - Rapportering, analyse, statistikk, styringsinformasjon
-  - KOSTRA-rapportering, sammenligning mellom kommuner
-  - Power BI / PowerBI, Aidn Analytics, dashboards, rapportbygger
-  - Egne rapporter, filtrer, ta ut rapport, tidsperiode
-  - Dokumentasjon i rapport-kontekst
   - Plassadministrasjon (rom, senger, belegg, institusjon, HDO, omsorgsboliger)
   - Hjelpemidler, KS Hjelpemidler, KS Påkobla, hjelpemiddellager
   - Økonomiintegrasjoner: Xledger, Helfo REST-API, KS Fiks API, NAV-integrasjon
   - Varsling ved endring i egenandelsgrunnlag / ligningstall
-  - Ressurskrevende tjenestemottakere (rapportering og refusjon)
+  - Ressurskrevende tjenestemottakere (refusjonsordningen)
   - Pasientregnskap / lommepenger
   - Diettkoder og matombringing (der det danner grunnlag for fakturering)
   - Automatisk taksting til HELFO (fysioterapi)
 
 excludes:
+  - Rapportering, analyse, statistikk, KOSTRA/KPR/IPLOS → Séamus (Data & Analytics)
+  - Aidn Analytics, dashboards, Power BI, styringsinformasjon → Séamus (Data & Analytics)
   - Rapport i sykepleie-/vakt-kontekst  → Line (CPR)
   - Meldingsintegrasjoner               → Hanne (Messaging)
   - Plassadministrasjon som ren klinisk/logistisk saksbehandling uten økonomi/belegg-kontekst → vurder CPR
@@ -43,13 +43,6 @@ tag_routes:
 
 keywords_strong:
   - faktur
-  - kostra
-  - statistikk
-  - styringsinformasjon
-  - powerbi
-  - power bi
-  - rapportering
-  - analyse
   - egenbetaling
   - egenandel
   - ligningstall
@@ -63,8 +56,6 @@ keywords_strong:
   - helfo
   - hjelpemidler
   - ks hjelpemidler
-  - aidn analytics
-  - dashboard
   - ressurskrevende
   - lommepenger
   - trekkliste
@@ -72,22 +63,13 @@ keywords_strong:
 disambiguations:
   - term: rapport
     route_here_when:
-      - kostra
-      - statistikk
-      - filtrer
-      - ta ut
-      - egne rapport
-      - tidsperiode
-      - dokumentasjon
-      - klokkeslett
-      - rapportering
-      - powerbi
-      - power bi
-      - styringsinformasjon
-      - aidn analytics
-      - dashboard
+      - fakturagrunnlag
+      - egenbetaling
+      - refusjon
       - ressurskrevende
-      - sammenligning
+    route_elsewhere_when:
+      - kostra, statistikk, styringsinformasjon, dashboard, aidn analytics, powerbi → seamus.beirne@aidn.no (Data & Analytics)
+      - natt, sykepleie, vakt, overlevering → line.adde@aidn.no (CPR)
   - term: faktura + arbeidsflyt
     route_here_always: true
     why: "Faktura i kombinasjon med arbeidsflyt er Back Office, ikke AI/Automation."
@@ -113,4 +95,5 @@ disambiguations:
 
 hard_negatives:
   - "rapportskjema i sykepleie/vakt-kontekst → CPR/Line"
+  - "rene analyse-/statistikk-/dashboardsaker → Séamus (Data & Analytics)"
   - "plassadministrasjon uten økonomi/belegg-vinkel og med ren klinisk kontekst → vurder CPR"

@@ -1,0 +1,61 @@
+# Scope: Adil Rashid — Team Health Station
+# Notes are in Norwegian (may contain English terms). Do not translate.
+# Opprettet 2026-08-12. Nytt produktområde i pilot — scopet er et utgangspunkt
+# og bør trenes/justeres når pilot-feedback begynner å komme inn.
+
+pm_email: adil.rashid@aidn.no
+pm_name: Adil Rashid
+team: Team Health Station
+
+description_no: |
+  Adil eier helsestasjonsområdet — et helt nytt produktområde i Aidn, nå i
+  pilot. Dekker helsestasjon 0–5 år, skolehelsetjenesten, helsestasjon for
+  ungdom, jordmor/svangerskaps- og barseloppfølging, og barnevaksinasjons-
+  programmet. All feedback som tydelig handler om helsestasjons- eller
+  skolehelsetjeneste-arbeidsflyt skal hit, selv om lignende funksjonalitet
+  (journal, timer, meldinger) finnes i andre team for hjemmetjeneste/institusjon.
+
+includes:
+  - Helsestasjon 0–5 år (barnekontroller, konsultasjoner, oppfølging)
+  - Skolehelsetjenesten (elever, skoler, vaksinering i skole)
+  - Helsestasjon for ungdom
+  - Jordmor, svangerskapsoppfølging, barseloppfølging, hjemmebesøk nyfødt
+  - Barnevaksinasjonsprogrammet, SYSVAK-registrering
+  - Helsesykepleiers arbeidsflater og verktøy
+  - Vekst- og utviklingsoppfølging (percentiler, milepæler)
+  - Timeavtaler og innkalling i helsestasjonskontekst
+
+excludes:
+  - Journalføring generelt (utenfor helsestasjon)   → Line (CPR)
+  - Legemidler/vaksinasjon i institusjon/hjemmetj.  → Sandra (Treatment)
+  - Timebestilling for pasient generelt             → Fredrik Pedersen (Patient)
+  - Meldinger/dialogmeldinger generelt              → Hanne (Messaging)
+
+tag_routes:
+  - "team health station"
+  - "helsestasjon"
+
+keywords_strong:
+  - helsestasjon
+  - skolehelsetjeneste
+  - helsesykepleier
+  - jordmor
+  - svangerskap
+  - barsel
+  - barnevaksinasjon
+  - sysvak
+  - spedbarn
+  - barnekontroll
+  - ungdomshelsestasjon
+  - hjemmebesøk nyfødt
+  - percentil
+
+disambiguations:
+  - term: vaksinasjon
+    route_here_when: [barn, skole, helsestasjon, sysvak, barnevaksinasjonsprogram]
+    route_elsewhere_when:
+      - influensa, covid, voksne, institusjon → sandra.otteraaen@aidn.no (Treatment)
+  - term: time / innkalling
+    route_here_when: [helsestasjon, skolehelse, jordmor, kontroll]
+    route_elsewhere_when:
+      - pasient bestiller selv, Mitt Aidn → fredrik.pedersen@aidn.no (Patient)

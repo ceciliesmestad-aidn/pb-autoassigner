@@ -41,8 +41,8 @@ excludes:
   - Saksbehandling, vedtak, tjenestetildeling  → Kristin (Case Handling)
   - Legemiddelkurve-spesifikt                  → Sandra (Treatment)
   - Meldinger, e-meldinger, PLO, sporbarhet    → Hanne (Messaging)
-  - Rapportering / analyse / KOSTRA            → Jens (Back Office)
-  - KPR-rapportering / IPLOS-statistikk        → Jens (Back Office)
+  - Rapportering / analyse / KOSTRA            → Séamus (Data & Analytics)
+  - KPR-rapportering / IPLOS-statistikk        → Séamus (Data & Analytics)
 
 tag_routes:
   - "team core patient record"
@@ -75,7 +75,7 @@ disambiguations:
   - term: rapport
     route_here_when: [natt, sykepleier, vakt, avdeling, overlevering]
     route_elsewhere_when:
-      - kostra, statistikk, styringsinformasjon → jens.malm@aidn.no (analytics)
+      - kostra, statistikk, styringsinformasjon → seamus.beirne@aidn.no (Data & Analytics)
   - term: oppgaver
     route_here_when: [journal, kartlegging, pasient]
   - term: arkivering
