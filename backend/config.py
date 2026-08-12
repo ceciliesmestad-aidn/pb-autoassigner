@@ -63,6 +63,10 @@ class ClassifierConfig:
     # batch is queued and a warning logged.
     autopilot_per_pm_cap: int = 20
     autopilot_total_cap: int = 200
+    # When a note is assigned (autopilot or Reviewer), also add the PM's team
+    # name as a tag on the note in Productboard (e.g. "Team Back Office").
+    # Best-effort: a failed tag call never breaks the assignment itself.
+    tag_team_on_assign: bool = True
 
 
 @dataclass

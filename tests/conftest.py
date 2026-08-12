@@ -74,6 +74,7 @@ class FakePBClient:
         # bleed across tests through the shared SAMPLE_PB_NOTES list.
         self._notes = copy.deepcopy(list(notes or SAMPLE_PB_NOTES))
         self.patches: list[tuple[str, str]] = []
+        self.tag_calls: list[tuple[str, list[str]]] = []
         self.patch_delay_seconds = 0.0
         # Mirror the real PBClient's attributes used by pipeline.ingest().
         self.api_version = "v1"
@@ -97,6 +98,17 @@ class FakePBClient:
             if n["id"] == note_uuid:
                 n["owner"] = {"email": owner_email}
         return 201
+
+    def add_tags(self, note_uuid, tags):
+        # Mirrors PBClient.add_tags — records the call, appends to note tags.
+        self.tag_calls.append((note_uuid, list(tags)))
+        for n in self._notes:
+            if n["id"] == note_uuid:
+                existing = [t.get("name") if isinstance(t, dict) else t
+                            for t in (n.get("tags") or [])]
+                n["tags"] = ([{"name": t} for t in existing]
+                             + [{"name": t} for t in tags if t not in existing])
+        return 200
 
 
 class FakeAnthropicClient:

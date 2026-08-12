@@ -25,6 +25,7 @@ autopilot_enabled = true
 autopilot_dry_run = false   # LIVE — assignments are PATCHed to Productboard
 autopilot_per_pm_cap = 20
 autopilot_total_cap = 200
+tag_team_on_assign = true   # add PM's team name as tag on assigned notes
 
 [training]
 window_days = 180

@@ -303,6 +303,30 @@ def test_assign_v1_sends_data_wrapped_body_to_notes_path():
     assert call["body"] == {"data": {"owner": {"email": "pm@aidn.no"}}}
 
 
+def test_add_tags_v2_sends_additems_patch():
+    c = PBClient(token="t", api_version="v2", patch_delay_seconds=0)
+    stub = StubHTTP([(200, {"data": {"id": "v2-note-1"}})])
+    stub.bind(c)
+
+    status = c.add_tags("v2-note-1", ["Team Back Office"])
+    assert status == 200
+
+    call = stub.calls[0]
+    assert call["method"] == "PATCH"
+    assert call["url"] == "https://api.productboard.com/v2/notes/v2-note-1"
+    assert call["body"] == {"data": {"patch": [{
+        "op": "addItems",
+        "path": "tags",
+        "value": [{"name": "Team Back Office"}],
+    }]}}
+
+
+def test_add_tags_rejected_on_v1():
+    c = PBClient(token="t", api_version="v1", patch_delay_seconds=0)
+    with pytest.raises(PBError):
+        c.add_tags("x", ["Team X"])
+
+
 def test_assign_v2_sends_fields_wrapped_body_to_v2_notes_path():
     c = PBClient(token="t", api_version="v2", patch_delay_seconds=0)
     stub = StubHTTP([(200, {"data": {"id": "v2-note-1"}})])

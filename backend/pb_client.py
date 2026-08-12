@@ -321,6 +321,25 @@ class PBClient:
         time.sleep(self.patch_delay_seconds)
         return status
 
+    def add_tags(self, note_uuid: str, tags: list[str]) -> int:
+        """Append tags to a note without touching its existing tags.
+
+        Uses the v2 patch op `addItems` (idempotent — PB ignores duplicates).
+        Companion to assign(): the autopilot uses it to stamp the owning
+        team's name on the note. v2 only; v1 was retired 2026-07-08.
+        Returns HTTP status.
+        """
+        if self.api_version != "v2":
+            raise PBError(400, "add_tags requires api_version v2", url="")
+        body = {"data": {"patch": [{
+            "op": "addItems",
+            "path": "tags",
+            "value": [{"name": t} for t in tags if t],
+        }]}}
+        status, _ = self._request("PATCH", f"/v2/notes/{note_uuid}", body=body)
+        time.sleep(self.patch_delay_seconds)
+        return status
+
 
 def _is_empty_draft(raw: dict) -> bool:
     """True for abandoned '+ Note' drafts: no content and no real title.

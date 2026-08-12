@@ -184,3 +184,59 @@ def test_dashboard_stats_shape(tmp_config, fake_pb, fake_anthropic, monkeypatch)
         assert stats["notes_by_state"]["suggested"] == 4
         assert "confidence_distribution" in stats
         assert sum(stats["confidence_distribution"].values()) == 4
+
+
+def test_assign_adds_team_tag(tmp_config, fake_pb, fake_anthropic, monkeypatch):
+    """A successful assignment also stamps the PM's team name as a tag."""
+    monkeypatch.setattr(
+        classify_mod,
+        "anthropic",
+        type("M", (), {"Anthropic": lambda **kwargs: fake_anthropic}),
+    )
+
+    with db.connect(tmp_config.db_path) as conn:
+        pipeline.ingest(conn, fake_pb)
+        pipeline.classify_pending(conn, tmp_config)
+
+        revurdering = conn.execute(
+            "SELECT id, pb_uuid FROM notes WHERE title LIKE 'Revurdering%'"
+        ).fetchone()
+
+        result = pipeline.assign_note(
+            conn, fake_pb, revurdering["id"], "kristin.shovick@aidn.no"
+        )
+        assert result["team_tagged"] is True
+        assert fake_pb.tag_calls == [
+            (revurdering["pb_uuid"], ["Team Case Handling"])
+        ]
+
+
+def test_assign_survives_tag_failure(tmp_config, fake_pb, fake_anthropic, monkeypatch):
+    """A failing tag call must never break the assignment itself."""
+    monkeypatch.setattr(
+        classify_mod,
+        "anthropic",
+        type("M", (), {"Anthropic": lambda **kwargs: fake_anthropic}),
+    )
+
+    def boom(note_uuid, tags):
+        raise RuntimeError("tag endpoint down")
+    fake_pb.add_tags = boom
+
+    with db.connect(tmp_config.db_path) as conn:
+        pipeline.ingest(conn, fake_pb)
+        pipeline.classify_pending(conn, tmp_config)
+
+        revurdering = conn.execute(
+            "SELECT id FROM notes WHERE title LIKE 'Revurdering%'"
+        ).fetchone()
+
+        result = pipeline.assign_note(
+            conn, fake_pb, revurdering["id"], "kristin.shovick@aidn.no"
+        )
+        assert result["pb_status"] == 201
+        assert result["team_tagged"] is False
+        state = conn.execute(
+            "SELECT state FROM notes WHERE id = ?", (revurdering["id"],)
+        ).fetchone()["state"]
+        assert state == "assigned"

@@ -54,6 +54,7 @@ autopilot_dry_run = true
 # is logged. Raise these as you observe real volumes.
 autopilot_per_pm_cap = 20
 autopilot_total_cap = 200
+tag_team_on_assign = true   # add PM's team name as tag on assigned notes
 
 [training]
 # Days of history to pull from PB per PM for training (notes owned by that PM).

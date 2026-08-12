@@ -270,6 +270,7 @@ def auto_assign_high_confidence(
                 result = assign_note(
                     conn, client, c["note_id"], pm,
                     assigned_by="autopilot",
+                    tag_team=cfg.classifier.tag_team_on_assign,
                 )
                 # assign_note swallows PBError into the result dict so the
                 # audit row is always written — surface it here, otherwise a
@@ -297,8 +298,14 @@ def assign_note(
     note_id: int,
     pm_email: str,
     assigned_by: str = "user",
+    tag_team: bool = True,
 ) -> dict:
-    """Push an assignment to PB and log the outcome."""
+    """Push an assignment to PB and log the outcome.
+
+    When `tag_team` is true (default), the PM's team name is also added as a
+    tag on the note after a successful assignment. Tagging is best-effort:
+    a failure is logged but never breaks or rolls back the assignment.
+    """
     note = db.note_by_id(conn, note_id)
     if note is None:
         raise ValueError(f"unknown note id: {note_id}")
@@ -320,6 +327,21 @@ def assign_note(
         pb_error = f"HTTP {e.status}: {e.body[:500]}"
         log.error("PATCH failed: %s", pb_error)
 
+    # Stamp the owning team's name as a tag — best-effort, never breaks the
+    # assignment. Only after a successful owner PATCH.
+    team_tagged = False
+    if (tag_team and pm.team and pb_error is None
+            and pb_status in (200, 201, 204)):
+        try:
+            tag_status = client.add_tags(note["pb_uuid"], [pm.team])
+            team_tagged = 200 <= tag_status < 300
+            if not team_tagged:
+                log.warning("assign: team-tag returned HTTP %s for note %s "
+                            "(assignment itself succeeded)", tag_status, note_id)
+        except Exception as e:  # noqa: BLE001 — tagging must never break assignment
+            log.warning("assign: team-tag failed for note %s (%s) — "
+                        "assignment itself succeeded", note_id, e)
+
     with db.transaction(conn):
         db.record_assignment(
             conn,
@@ -339,6 +361,7 @@ def assign_note(
         "pm_email": pm_email,
         "pb_status": pb_status,
         "pb_error": pb_error,
+        "team_tagged": team_tagged,
         "was_override": suggested_pm is not None and suggested_pm != pm_email,
     }
 
