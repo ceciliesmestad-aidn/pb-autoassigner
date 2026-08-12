@@ -333,7 +333,8 @@ def assign_note(
     if (tag_team and pm.team and pb_error is None
             and pb_status in (200, 201, 204)):
         try:
-            tag_status = client.add_tags(note["pb_uuid"], [pm.team])
+            tag_status = client.add_tags(note["pb_uuid"],
+                                         [owners.team_tag(pm.team)])
             team_tagged = 200 <= tag_status < 300
             if not team_tagged:
                 log.warning("assign: team-tag returned HTTP %s for note %s "

@@ -89,6 +89,26 @@ def get_by_email(email: str) -> PM | None:
     return None
 
 
+# ─── PB team tags ─────────────────────────────────────────────────────────────
+
+# The registry's team names don't all match the tag names that already exist
+# in the Productboard workspace (checked live 2026-08-12). Map the exceptions
+# here so assignments reuse the existing tags instead of creating near-
+# duplicates. Teams not listed use their registry name as-is.
+_PB_TEAM_TAG_OVERRIDES: dict[str, str] = {
+    "Team CPR":             "Team Core Patient Record",
+    "Team AI & Automation": "Team Automation",
+    "Team OpenAIdn":        "Team Open Aidn",
+    "Design System":        "Team Design System",
+    "Product Leadership":   "Team Product Leadership",
+}
+
+
+def team_tag(team: str) -> str:
+    """PB tag name for a registry team name."""
+    return _PB_TEAM_TAG_OVERRIDES.get(team, team)
+
+
 # ─── adding a new PM ──────────────────────────────────────────────────────────
 
 def email_to_scope_file(email: str) -> str:

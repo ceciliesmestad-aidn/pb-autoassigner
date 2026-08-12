@@ -240,3 +240,33 @@ def test_assign_survives_tag_failure(tmp_config, fake_pb, fake_anthropic, monkey
             "SELECT state FROM notes WHERE id = ?", (revurdering["id"],)
         ).fetchone()["state"]
         assert state == "assigned"
+
+
+def test_team_tag_uses_existing_pb_tag_names():
+    """Registry team names map to the tag names that already exist in PB."""
+    from backend import owners
+    assert owners.team_tag("Team CPR") == "Team Core Patient Record"
+    assert owners.team_tag("Team AI & Automation") == "Team Automation"
+    assert owners.team_tag("Team OpenAIdn") == "Team Open Aidn"
+    assert owners.team_tag("Design System") == "Team Design System"
+    # Teams whose registry name already matches the PB tag pass through as-is.
+    assert owners.team_tag("Team Case Handling") == "Team Case Handling"
+    assert owners.team_tag("Team Data & Analytics") == "Team Data & Analytics"
+    assert owners.team_tag("Team Health Station") == "Team Health Station"
+
+
+def test_assign_tags_with_mapped_team_name(tmp_config, fake_pb, fake_anthropic, monkeypatch):
+    """Assigning to Line (Team CPR) must tag 'Team Core Patient Record'."""
+    monkeypatch.setattr(
+        classify_mod,
+        "anthropic",
+        type("M", (), {"Anthropic": lambda **kwargs: fake_anthropic}),
+    )
+    with db.connect(tmp_config.db_path) as conn:
+        pipeline.ingest(conn, fake_pb)
+        pipeline.classify_pending(conn, tmp_config)
+        note = conn.execute(
+            "SELECT id, pb_uuid FROM notes WHERE title LIKE 'Revurdering%'"
+        ).fetchone()
+        pipeline.assign_note(conn, fake_pb, note["id"], "line.adde@aidn.no")
+        assert fake_pb.tag_calls == [(note["pb_uuid"], ["Team Core Patient Record"])]
