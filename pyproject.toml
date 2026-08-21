@@ -9,6 +9,10 @@ dependencies = [
     "anthropic>=0.39",
     "pyyaml>=6.0",
     "pydantic>=2.8",
+    # classify.py imports httpx directly (custom SSL client for the corporate
+    # proxy). Must be a first-class dep: newer anthropic SDKs no longer pull
+    # it in transitively — that broke the CI run on 2026-08-21.
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
