@@ -1,0 +1,68 @@
+# Scope: Magne Davidsen — Team Data Migrations
+# Notes are in Norwegian (may contain English terms). Do not translate.
+# Opprettet 2026-09-14 på Cecilies forespørsel — Magne manglet i PM-registeret.
+
+pm_email: magne.davidsen@aidn.no
+pm_name: Magne Davidsen
+team: Team Data Migrations
+
+description_no: |
+  Magne eier datamigrering i Aidn — både engangsmigrering av historisk data fra
+  legacy EPJ-systemer (CosDoc, Gerica, Profil, SFM) ved onboarding av nye
+  kommuner, og løpende migreringsverktøy/datakvalitet i etterkant (opprydding,
+  validering, reimport, datakvalitetsfeil oppdaget etter migrering).
+
+includes:
+  - Migrering av historisk data ved onboarding (fra CosDoc/Gerica/Profil/SFM til Aidn)
+  - Datamigrering / datamigreringsverktøy generelt
+  - Datakvalitet knyttet til migrert data (feil, mangler, avvik etter import)
+  - Reimport / etterimport av data som ble migrert feil første gang
+  - Verktøy og prosesser internt i migreringsteamet
+
+excludes:
+  - Ren opplæring i bruk av Aidn (ikke migreringsrelatert) → domene-PM basert på innhold
+  - Generell datakvalitet i løpende drift, ikke knyttet til en migrering → vurder domene-PM
+  - Zendesk- eller devbox-relatert testing → Knut Ole (se prioriteringsregel under),
+    ikke Magne, selv om notatet også nevner migrering
+
+# ─── Test-feedback under Zendesk-innføringen (lagt til 2026-09-14) ──────────
+# Cecilie presiserte: dersom testfeedback IKKE nevner devbox eller zendesk,
+# men handler om migrering/datamigrering, skal den til Magne — ikke stå åpen
+# eller gå til Knut Ole. Prioritetsrekkefølge (se også knut_ole_sjoli.yaml):
+#   1. Nevner devbox ELLER zendesk  → Knut Ole (uansett om migrering også nevnes)
+#   2. Nevner IKKE devbox/zendesk, men nevner migrering/datamigrering → Magne
+#   3. Verken/eller → følg vanlig domeneklassifisering / global test-eksklusjon
+keyword_combination_rule:
+  requires_all: ["test", "migrering"]
+  requires_none: ["devbox", "zendesk"]
+  note: >
+    "test" og "migrering" (eller "datamigrering") kan stå hvor som helst i
+    notatet (tittel eller brødtekst). Case-insensitiv. Hvis notatet i tillegg
+    nevner "devbox" eller "zendesk", går det til Knut Ole i stedet — se
+    prioritetsnotatet i _global.yaml.
+
+priority_over_global_exclusion: true
+priority_note: >
+  Denne scopen har forrang over _global.yaml sin exclude_rule
+  "test-notat fra Aidn-intern" (company Aidn + regex \btest\b → la stå åpen),
+  men KUN når devbox/zendesk ikke er nevnt (da vinner Knut Ole sin regel).
+
+keywords_strong:
+  - migrering
+  - datamigrering
+  - migreringsverktøy
+
+disambiguations:
+  - term: test
+    route_here_when: [migrering, datamigrering, reimport, dataimport]
+    route_elsewhere_when:
+      - "devbox eller zendesk nevnt → knut.sjoli@aidn.no (Team Infrastructure)"
+      - "verken migrering, devbox eller zendesk → vanlig domeneklassifisering
+        eller global test-eksklusjon"
+  - term: migrering
+    route_here_when: [cosdoc, gerica, profil, sfm, onboarding, historisk data,
+                      reimport, datakvalitet, import]
+
+hard_negatives:
+  - "Migrering nevnt sammen med devbox eller zendesk → Knut Ole, ikke Magne"
+  - "Generell opplæring/bruk uten migreringskontekst → ikke automatisk Magne"

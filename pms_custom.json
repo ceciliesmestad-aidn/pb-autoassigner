@@ -16,5 +16,17 @@
     "name": "Adil Rashid",
     "team": "Team Health Station",
     "scope_file": "adil_rashid"
+  },
+  {
+    "email": "knut.sjoli@aidn.no",
+    "name": "Knut Ole Sjøli",
+    "team": "Team Infrastructure",
+    "scope_file": "knut_ole_sjoli"
+  },
+  {
+    "email": "magne.davidsen@aidn.no",
+    "name": "Magne Davidsen",
+    "team": "Team Data Migrations",
+    "scope_file": "magne_davidsen"
   }
 ]

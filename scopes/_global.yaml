@@ -19,9 +19,16 @@ routing_principles_no: |
 
 exclude_rules:
   # Returner pm_email: null ("leave open") for disse — ikke kast bort PM-tid.
+  # UNNTAK (lagt til 2026-09-14, Zendesk-innføring + Data Migrations):
+  # sjekk knut_ole_sjoli.yaml OG magne_davidsen.yaml FØR denne regelen
+  # anvendes. Prioritet:
+  #   1. devbox / smoke test / (test+zendesk) → knut.sjoli@aidn.no (Team Infrastructure)
+  #   2. (test+migrering) UTEN devbox/zendesk → magne.davidsen@aidn.no (Team Data Migrations)
+  #   3. ellers → denne exclude_rule-en gjelder som før (la stå åpen)
   - when_all:
       - company: "Aidn" eller "aidn.no"
       - text matches regex: "\\btest\\b"
+    unless: "notatet matcher knut_ole_sjoli.yaml (devbox/smoke test/test+zendesk → knut.sjoli@aidn.no) eller magne_davidsen.yaml (test+migrering uten devbox/zendesk → magne.davidsen@aidn.no)"
     reason: test-notat fra Aidn-intern
   - when_title_is_one_of:
       - "test"

@@ -1,0 +1,78 @@
+# Scope: Knut Ole Sjøli — Team Infrastructure
+# Notes are in Norwegian (may contain English terms). Do not translate.
+# Opprettet 2026-09-14: Zendesk innføres som nytt supportverktøy, og det kommer
+# mye test-/devbox-/smoke test-relatert støy inn i Productboard i denne perioden.
+# Cecilie ba om at dette rutes til Knut Ole i stedet for å bli liggende ufordelt
+# eller feilklassifisert på en domene-PM.
+#
+# MERK — dette er et unntak fra "domene slår teknologi"-prinsippet i _global.yaml:
+# denne routingen er bevisst teknologi-/nøkkelordbasert, ikke domenebasert.
+# Den skal også VINNE over exclude_rules-regelen i _global.yaml som ellers ville
+# latt Aidn-interne "test"-notater stå ufordelt — se prioritetsnotat der.
+
+pm_email: knut.sjoli@aidn.no
+pm_name: Knut Ole Sjøli
+team: Team Infrastructure
+
+description_no: |
+  Knut Ole tar imot testing- og verktøy-relatert støy som oppstår i forbindelse
+  med Zendesk-innføringen (nytt supportverktøy) og generell devbox-/smoke test-aktivitet.
+  Dette er IKKE en domene-scope (han eier ikke et produktområde) — det er en
+  midlertidig oppsamlingsscope for teknisk testing/verktøy-notater som ellers
+  ville forstyrret domene-PM-enes køer eller blitt liggende ufordelt.
+
+includes:
+  - Alle notater som nevner "devbox" (uansett kontekst eller domene)
+  - Alle notater som nevner "smoke test" / "smoketest" (uansett kontekst eller domene)
+  - Notater som nevner BÅDE "test" OG "zendesk" (uansett rekkefølge, hvor som helst
+    i tittel eller brødtekst) — f.eks. "testing av Zendesk-integrasjon",
+    "Zendesk smoke test", "test av ny supportflate (Zendesk)"
+
+excludes:
+  - Zendesk-notater som IKKE også nevner "test" (f.eks. ren opplæring i eller
+    konfigurasjon av Zendesk uten testkontekst) → rutes på vanlig domenebasis,
+    ikke automatisk hit
+  - Generelle test-notater uten "devbox", "smoke test" eller "zendesk" → følger
+    vanlig _global.yaml-eksklusjon (Aidn-internt "test"-notat → la stå åpen)
+  - Test-notater om MIGRERING som IKKE også nevner "devbox" eller "zendesk"
+    → magne.davidsen@aidn.no (Team Data Migrations), ikke Knut Ole (lagt til
+    2026-09-14, se magne_davidsen.yaml)
+
+# Prioritetsrekkefølge når et notat nevner BÅDE migrering OG devbox/zendesk:
+# devbox/zendesk vinner → Knut Ole. Se magne_davidsen.yaml for motsatt case.
+
+keywords_strong:
+  - devbox
+  - smoke test
+  - smoketest
+
+keyword_combination_rule:
+  # Egen regel i tillegg til enkeltord over: match hvis BEGGE er til stede.
+  requires_all: ["test", "zendesk"]
+  note: >
+    "test" og "zendesk" kan stå hvor som helst i notatet (tittel eller brødtekst),
+    trenger ikke stå sammen. Match er ikke case-sensitiv.
+
+priority_over_global_exclusion: true
+priority_note: >
+  Denne scopen har forrang over _global.yaml sin exclude_rule
+  "test-notat fra Aidn-intern" (company Aidn + regex \btest\b → la stå åpen).
+  Hvis et notat matcher devbox / smoke test / (test AND zendesk), skal det
+  rutes til Knut Ole selv om det også ville trigget den globale
+  test-eksklusjonen.
+
+disambiguations:
+  - term: test
+    route_here_when: [devbox, smoke test, smoketest, zendesk]
+    route_elsewhere_when:
+      - "ingen av devbox/smoke test/zendesk er til stede → følg vanlig
+        domeneklassifisering eller global test-eksklusjon"
+  - term: zendesk
+    route_here_when: [test, testing, smoke test, devbox]
+    route_elsewhere_when:
+      - "zendesk nevnt uten noen test-kontekst → vurder domene-PM basert på
+        hva saken faktisk handler om (f.eks. supportrutine, opplæring)"
+
+hard_negatives:
+  - "Zendesk-relatert opplæring/rutine-spørsmål uten testkontekst → ikke automatisk Knut Ole"
+  - "Generelt 'test' i tittel uten devbox/smoke test/zendesk → global eksklusjon gjelder, ikke Knut Ole"
