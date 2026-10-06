@@ -10,7 +10,7 @@ description_no: |
   Det vil si API-er og integrasjoner mot eksterne systemer som ikke er eid av
   andre team: VFT, VKP, eksterne EPJ-systemer, webhooks, Open API-spesifikasjoner,
   dataseksport til BI/analyse-verktøy, og generell plattformåpenhet.
-  Ekskluderer meldingsintegrasjoner (Hanne) og innlogging/IAM (Abraham).
+  Ekskluderer meldingsintegrasjoner (Hanne) og innlogging/IAM (Silje).
 
 includes:
   - VFT-integrasjon, VKP-integrasjon
@@ -23,7 +23,7 @@ includes:
 
 excludes:
   - E-melding, PLO, dialogmelding, HelseID-meldinger → Hanne (Messaging)
-  - Innlogging, SSO, HelseID-autentisering            → Abraham (IAM)
+  - Innlogging, SSO, HelseID-autentisering            → Silje (IAM)
   - Pasientjournal og EPJ-funksjonalitet              → Line (CPR)
   - Faktura og økonomiintegrering                    → Jens (Back Office)
   - Automatiseringsmotor (intern)                    → Erik (Patient)
@@ -51,8 +51,8 @@ disambiguations:
     route_here_when: [vft, vkp, ekstern, tredjepart, webhook, open api, datadeling]
     notes: >
       "Integrasjon" alene er ikke nok. Det må være snakk om ekstern/tredjeparts-
-      integrasjon. Meldingsintegrasjoner (e-melding, PLO) → Hanne. IAM → Abraham.
+      integrasjon. Meldingsintegrasjoner (e-melding, PLO) → Hanne. IAM → Silje.
   - term: api
     route_here_when: [ekstern, tredjepart, open, spesifikasjon, developer]
     route_elsewhere_when:
-      - [innlogging, autentisering, sso] → abraham.guzman@aidn.no
+      - [innlogging, autentisering, sso] → silje.larsen@aidn.no

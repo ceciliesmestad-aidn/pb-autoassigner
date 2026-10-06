@@ -46,7 +46,7 @@ _BUILTIN_PMS: list[PM] = [
     PM("erik.story@aidn.no",         "Erik Story",             "Team AI & Automation",     "erik_story"),
     PM("fredrik.pedersen@aidn.no",   "Fredrik Pedersen",       "Team Patient",             "fredrik_pedersen"),
     PM("jens.malm@aidn.no",          "Jens Aga Malm",          "Team Back Office",         "jens_malm"),
-    PM("abraham.guzman@aidn.no",     "Abraham Guzman",         "Team IAM",                 "abraham_guzman"),
+    PM("silje.larsen@aidn.no",       "Silje Larsen",           "Team IAM",                 "silje_larsen"),  # interim PM, replaced Abraham Guzman 2026-10-05
     PM("ashild.herdlevaer@aidn.no",  "Ashild Dronen Herdlevaer", "Team Collaboration",     "ashild_herdlevaer"),
     PM("sally.renshaw@aidn.no",      "Sally Renshaw",          "Design System",            "sally_renshaw"),
     PM("therese.borter@aidn.no",     "Therese Borter",         "Team Navigator",           "therese_borter"),

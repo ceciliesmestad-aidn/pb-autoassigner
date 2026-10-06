@@ -1,12 +1,12 @@
-# Scope: Abraham Guzman — Team IAM
+# Scope: Silje Larsen — Team IAM (interim PM, replaced Abraham Guzman 2026-10-05)
 # Notes are in Norwegian (may contain English terms). Do not translate.
 
-pm_email: abraham.guzman@aidn.no
-pm_name: Abraham Guzman
+pm_email: silje.larsen@aidn.no
+pm_name: Silje Larsen
 team: Team IAM
 
 description_no: |
-  Abraham eier identitet og tilgangsstyring: innlogging, SSO, HelseID-autentisering,
+  Silje eier identitet og tilgangsstyring: innlogging, SSO, HelseID-autentisering,
   tilgangsroller, organisasjonsstruktur for tilganger, delegering.
 
 includes:
