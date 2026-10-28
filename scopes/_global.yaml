@@ -16,6 +16,9 @@ routing_principles_no: |
   basert på domeneinnholdet i notatet (hva handler det om?), uavhengig av om det
   er en del av et anbud, tilbudssvar, eller innkjøpsprosess.
   VFT- og VKP-integrasjoner → Fredrik (Team OpenAIdn), ikke "holdes åpen".
+  "Manuell avslutning av flyt" (f.eks. tittel "Tilbakemelding om manuell avslutning
+  av flyt i Aidn (Team Automation)") → alltid Erik Story (erik.story@aidn.no,
+  Team AI & Automation), høy konfidens. Skal IKKE holdes åpen. (Lagt til 2026-10-28.)
 
 exclude_rules:
   # Returner pm_email: null ("leave open") for disse — ikke kast bort PM-tid.
@@ -36,8 +39,9 @@ exclude_rules:
       - "this is yet another test"
       - "testing forsmag"
     reason: entydig test-tittel
-  - when_text_contains: ["manuell avslutning av flyt"]
-    reason: intern automation-tilbakemelding (ekskluderes)
+  # "Manuell avslutning av flyt" ble tidligere holdt åpen her. Fra 2026-10-28
+  # (Cecilie) skal disse tildeles Erik Story / Team Automation — se
+  # routing_principles_no og erik_story.yaml. Regelen er fjernet.
   # VFT/VKP-integrasjoner tilhører nå Fredrik (Team OpenAIdn) — ikke lenger "holdes åpen"
   # (regelen er fjernet; fredrik_behn.yaml fanger disse via keywords)
   - when_body_length_under: 25

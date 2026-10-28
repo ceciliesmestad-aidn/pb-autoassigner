@@ -65,4 +65,4 @@ disambiguations:
   - "'Tale-til-tekst' / AI-funksjoner → Erik (Team AI & Automation), selv om de eksponeres i pasientportalen"
 
 hard_negatives:
-  - "manuell avslutning av flyt"  # intern feedback, ekskluder helt
+  - "manuell avslutning av flyt"  # → Erik Story (Team Automation), ikke Fredrik

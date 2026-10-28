@@ -24,6 +24,7 @@ includes:
   - Automatiseringsmotor (eksternt orientert)
   - Automasjonsplattform for lokal konfigurasjon av arbeidsflyter
   - Arbeidsflyter for sykehusinnleggelser (fordi de driver automasjonsmotoren)
+  - Tilbakemelding om manuell avslutning av flyt i Aidn (Team Automation) — alltid Erik (fra 2026-10-28)
 
 excludes:
   - Mitt Aidn / pasientportal-funksjoner          → Fredrik (Team Patient)
@@ -31,7 +32,6 @@ excludes:
   - Innbyggerdialog og selvbetjening              → Fredrik (Team Patient)
   - Helsenorge / KS DigiHelse-integrasjoner       → Fredrik (Team Patient)
   - Tale-til-tekst i kartlegging/saksbehandling   → Kristin (Case Handling)
-  - Intern automation-feedback ("Manuell avslutning av flyt") → ekskluder
   - Faktura + arbeidsflyt                         → Jens (Back Office)
 
 tag_routes:
@@ -53,11 +53,10 @@ keywords_strong:
   - stemmestyring
   - oversettelse
   - sykehusinnleggelse
+  - manuell avslutning av flyt
 
 disambiguations:
+  - "'Manuell avslutning av flyt' → alltid Erik med høy konfidens (0.90+), uansett avsender. Ikke hold åpen."
   - "'Tale-til-tekst' i journal/kartleggingssammenheng → vurder Kristin (Case Handling) hvis kontekst er saksbehandling"
   - "AI-funksjon eksponert i Mitt Aidn (f.eks. tale i pasientportal) → fortsatt Erik når det handler om selve AI-funksjonen, IKKE Fredrik"
   - "'Automatisering av faktura/lønn' → Jens (Back Office), ikke Erik"
-
-hard_negatives:
-  - "manuell avslutning av flyt"  # intern feedback, ekskluder helt
