@@ -34,5 +34,11 @@
     "name": "William Knudtzon",
     "team": "Team Scheduling",
     "scope_file": "william_knudtzon"
+  },
+  {
+    "email": "ida.walsoe@aidn.no",
+    "name": "Ida Sund Walsøe",
+    "team": "Team Training & Support",
+    "scope_file": "ida_walsoe"
   }
 ]

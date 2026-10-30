@@ -1,0 +1,71 @@
+# Scope: Ida Sund Walsøe — Team Training & Support
+# Notes are in Norwegian (may contain English terms). Do not translate.
+# Opprettet 2026-10-30. Nytt team. Ida er PM for hjelpesenteret og for
+# opplæring og onboarding fra produktsiden. Scopet er et utgangspunkt og bør
+# trenes når det har kommet inn noen uker med feedback.
+
+pm_email: ida.walsoe@aidn.no
+pm_name: Ida Sund Walsøe
+team: Team Training & Support
+
+description_no: |
+  Ida eier Team Training & Support: hjelpesenteret (hjelp.aidn.no,
+  hjelpeartikler, søk i hjelpesenteret, hjelpeknappen i Aidn), og opplæring og
+  onboarding fra produktsiden: Øvingsrommet, opplæringsløp og
+  opplæringsløsningen, opplæringsstatus og -progresjon, demomiljø og
+  opplæringsbrukere, og hvordan nye brukere og kommuner kommer i gang i Aidn.
+
+includes:
+  - Hjelpesenteret / hjelp.aidn.no / hjelpeartikler / brukerveiledninger
+  - Søk og søkeord i hjelpesenteret
+  - Hjelpeknappen i Aidn (plassering, innhold, at den ligger over/under andre vinduer)
+  - Øvingsrommet (opplæringsmiljø), lenke til Øvingsrommet fra journalsystemet
+  - Opplæringsløp, opplæringsløsningen, e-læring, kurs
+  - Opplæringsstatus, opplæringsoversikt, leders oversikt over ansattes opplæringsprogresjon
+  - Rollebasert opplæring
+  - Demomiljø og opplæringsbrukere
+  - Onboarding av nye brukere og nye kommuner fra produktsiden (komme i gang, introduksjon, guider)
+
+excludes:
+  - Datamigrering ved onboarding (CosDoc/Gerica/Profil/SFM → Aidn)  → Magne (Data Migrations)
+  - Devbox / smoke test / test + Zendesk                            → Knut Ole (Infrastructure)
+  - Hjelpetekst eller tooltip inne i én bestemt funksjon            → PM-en som eier funksjonen
+  - Global navigasjon, meny, søk i appen (ikke hjelpesenteret)       → navigator.interim@aidn.no (Team Navigator)
+  - Hjemmehjelp er en helsetjeneste, ikke hjelpesenteret            → domene-PM
+
+tag_routes:
+  - "team training & support"
+  - "team training and support"
+
+keywords_strong:
+  - hjelpesenter
+  - hjelpesenteret
+  - hjelp.aidn.no
+  - hjelpeartikkel
+  - hjelpeknapp
+  - hjelpeknappen
+  - øvingsrommet
+  - opplæring
+  - opplæringsløp
+  - opplæringsløsning
+  - opplæringsstatus
+  - opplæringsbruker
+  - e-læring
+  - demomiljø
+  - brukerveiledning
+  - onboarding
+
+disambiguations:
+  - term: hjelp
+    route_here_when: [hjelpesenter, hjelpeartikkel, hjelpeknapp, brukerveiledning]
+    route_elsewhere_when:
+      - hjemmehjelp, praktisk bistand → domene-PM (tjeneste), ikke Ida
+      - hjelpetekst i et bestemt skjema eller felt → PM-en som eier funksjonen
+  - term: onboarding
+    route_here_when: [opplæring, komme i gang, nye brukere, introduksjon, øvingsrom]
+    route_elsewhere_when:
+      - datamigrering, konvertering fra gammelt EPJ → magne.davidsen@aidn.no (Data Migrations)
+  - term: søk
+    route_here_when: [hjelpesenteret, hjelpeartikler]
+    route_elsewhere_when:
+      - søk i appen (pasient, ansatt, journal, meny) → navigator.interim@aidn.no (Team Navigator)

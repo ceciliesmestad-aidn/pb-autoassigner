@@ -22,6 +22,7 @@ includes:
 
 excludes:
   - Navigasjon internt i én domene-flate → respektive PM
+  - Hjelpesenteret, hjelpeknappen, Øvingsrommet, opplæring → Ida (Team Training & Support)
 
 tag_routes:
   - "team navigator"
