@@ -33,6 +33,7 @@ excludes:
   - Helsenorge / KS DigiHelse-integrasjoner       → Fredrik (Team Patient)
   - Tale-til-tekst i kartlegging/saksbehandling   → Kristin (Case Handling)
   - Faktura + arbeidsflyt                         → Jens (Back Office)
+  - Navigasjon, meny, søk på tvers, hjem-flate    → navigator.interim@aidn.no (Team Navigator — Erik er interim PM, men bruk Navigator-nøkkelen så notatet får riktig team-tag)
 
 tag_routes:
   - "team ai"

@@ -1,12 +1,16 @@
-# Scope: Therese Borter — Team Navigator
+# Scope: Team Navigator — interim: Erik Story
 # Notes are in Norwegian (may contain English terms). Do not translate.
+# 2026-10-30: Therese Borter slutter. Erik Story er interim PM for Navigator.
+# Rutingnøkkelen under (navigator.interim@aidn.no) er IKKE en ekte e-post:
+# AutoAssigneren setter Erik som eier i Productboard og tagger "Team Navigator".
+# Når ny Navigator-PM kommer: bytt pm_email her og i backend/owners.py.
 
-pm_email: therese.borter@aidn.no
-pm_name: Therese Borter
+pm_email: navigator.interim@aidn.no
+pm_name: Erik Story (interim Navigator)
 team: Team Navigator
 
 description_no: |
-  Therese eier Navigator — hovednavigasjon, søk, hjem-flate, "hvordan kommer
+  Team Navigator eier — hovednavigasjon, søk, hjem-flate, "hvordan kommer
   brukeren seg rundt i appen". Typisk tverrgående UX som ikke tilhører én
   domeneflate.
 

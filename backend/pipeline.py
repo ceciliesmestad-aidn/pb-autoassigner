@@ -322,7 +322,8 @@ def assign_note(
     pb_status = None
     pb_error = None
     try:
-        pb_status = client.assign(note["pb_uuid"], pm_email)
+        # Interim-cover entries route to a different real PB owner.
+        pb_status = client.assign(note["pb_uuid"], pm.owner_email)
     except pb_client.PBError as e:
         pb_error = f"HTTP {e.status}: {e.body[:500]}"
         log.error("PATCH failed: %s", pb_error)

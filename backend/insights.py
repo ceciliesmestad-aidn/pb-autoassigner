@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 import anthropic
 
 from . import classify as classify_mod
+from . import owners
 from . import pb_client as pb_mod
 from .config import AnthropicConfig
 
@@ -115,11 +116,15 @@ def compute_insights(
     notes: list[dict] = []
     try:
         company_names = pb.company_names()  # v2: id→name map; v1: {}
-        for raw in pb.list_notes(owner_email=pm_email):
+        owner_email, required_tag = owners.pb_note_scope(pm_email)
+        for raw in pb.list_notes(owner_email=owner_email):
             created = raw.get("createdAt") or raw.get("created_at") or ""
             if created and created < since_iso:
                 continue
-            notes.append(pb_mod.flatten_note(raw, company_names))
+            flat = pb_mod.flatten_note(raw, company_names)
+            if required_tag and not owners.has_tag(flat.get("tags"), required_tag):
+                continue  # interim cover: only this team's notes
+            notes.append(flat)
     except Exception as e:
         log.warning("insights: PB fetch for %s failed: %s", pm_email, e)
         raise

@@ -235,12 +235,15 @@ def _fetch_pb_notes_for_pm(pb, pm_email: str, since_iso: str) -> list[dict]:
     try:
         notes = []
         company_names = pb.company_names()  # v2: id→name map; v1: {}
-        for raw in pb.list_notes(owner_email=pm_email):
+        owner_email, required_tag = owners.pb_note_scope(pm_email)
+        for raw in pb.list_notes(owner_email=owner_email):
             # PB API v1 uses camelCase; accept both spellings.
             created = raw.get("createdAt") or raw.get("created_at") or ""
             if created and created < since_iso:
                 continue  # PB returns newest-first; once we're past the window, skip
             flat = pb_mod.flatten_note(raw, company_names)
+            if required_tag and not owners.has_tag(flat.get("tags"), required_tag):
+                continue  # interim cover: only this team's notes
             notes.append(flat)
         return notes
     except Exception as e:

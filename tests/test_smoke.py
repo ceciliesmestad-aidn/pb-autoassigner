@@ -270,3 +270,47 @@ def test_assign_tags_with_mapped_team_name(tmp_config, fake_pb, fake_anthropic, 
         ).fetchone()
         pipeline.assign_note(conn, fake_pb, note["id"], "line.adde@aidn.no")
         assert fake_pb.tag_calls == [(note["pb_uuid"], ["Team Core Patient Record"])]
+
+
+def test_interim_navigator_routes_to_erik_with_navigator_tag(
+        tmp_config, fake_pb, fake_anthropic, monkeypatch):
+    """Team Navigator (interim → Erik): PB owner is Erik, tag stays 'Team Navigator'."""
+    monkeypatch.setattr(
+        classify_mod,
+        "anthropic",
+        type("M", (), {"Anthropic": lambda **kwargs: fake_anthropic}),
+    )
+    from backend import owners
+    nav = owners.get_by_email("navigator.interim@aidn.no")
+    assert nav is not None and nav.is_interim_cover
+    assert nav.owner_email == "erik.story@aidn.no"
+
+    with db.connect(tmp_config.db_path) as conn:
+        pipeline.ingest(conn, fake_pb)
+        row = conn.execute("SELECT id, pb_uuid FROM notes LIMIT 1").fetchone()
+        result = pipeline.assign_note(conn, fake_pb, row["id"], "navigator.interim@aidn.no")
+
+    assert result["pb_status"] == 201
+    # The routing key is never sent to PB — Erik is.
+    assert fake_pb.patches[-1] == (row["pb_uuid"], "erik.story@aidn.no")
+    assert fake_pb.tag_calls[-1] == (row["pb_uuid"], ["Team Navigator"])
+
+
+def test_pb_note_scope_filters_interim_cover_by_tag():
+    from backend import owners
+    assert owners.pb_note_scope("navigator.interim@aidn.no") == ("erik.story@aidn.no", "Team Navigator")
+    assert owners.pb_note_scope("erik.story@aidn.no") == ("erik.story@aidn.no", None)
+    assert owners.has_tag(["team navigator ", "x"], "Team Navigator")
+    assert not owners.has_tag(["Team Automation"], "Team Navigator")
+
+
+def test_departed_pms_not_in_registry():
+    from backend import owners
+    emails = {p.email for p in owners.get_all()}
+    assert "sally.renshaw@aidn.no" not in emails
+    assert "therese.borter@aidn.no" not in emails
+    assert "ronald.baars@aidn.no" in emails
+    # Every registry entry has a scope file.
+    from backend.config import PROJECT_ROOT
+    for p in owners.get_all():
+        assert (PROJECT_ROOT / "scopes" / f"{p.scope_file}.yaml").exists(), p.scope_file

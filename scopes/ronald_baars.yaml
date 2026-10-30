@@ -1,14 +1,14 @@
-# Scope: Sally Renshaw — Design System
+# Scope: Ronald Baars — Design System
 # Notes are in Norwegian (may contain English terms). Do not translate.
-# Known issue: Sally's PB email had validation issues in the April 2026 batch.
-# Verify via `pb-assigner verify-map` before bulk assigning.
+# 2026-10-30: Sally Renshaw har sluttet. Ronald (Sr. front-end, Design System)
+# tar imot feedback for designsystemet. Designsystemet er ikke et produktteam.
 
-pm_email: sally.renshaw@aidn.no
-pm_name: Sally Renshaw
+pm_email: ronald.baars@aidn.no
+pm_name: Ronald Baars
 team: Design System
 
 description_no: |
-  Sally eier designsystemet: komponenter, designtokens, ikoner, typografi,
+  Ronald tar imot feedback om designsystemet: komponenter, designtokens, ikoner, typografi,
   designsystem.aidn-dokumentasjon, brukergrensesnitt-patterns på tvers av produktet.
 
 includes:
