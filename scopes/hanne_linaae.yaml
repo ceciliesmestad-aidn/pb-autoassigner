@@ -64,8 +64,9 @@ keywords_strong:
   - sykehusopphold
 
 disambiguations:
-  - "varsel på avtaler → ikke Messaging (kalender/scheduling)"
+  - "varsel på avtaler → ikke Messaging, men William Knudtzon (Team Scheduling)"
   - "labsvar-varsling i e-melding/EDI → Messaging; selve lab-registrering → annet team"
 
 hard_negatives:
-  - "vft", "vkp-integr"  # Tilhører Fredrik (Team OpenAIdn), ikke Messaging
+  - "vft"  # Tilhører Fredrik Behn (Team OpenAIdn), ikke Messaging
+  - "vkp-integr"  # Tilhører Fredrik Behn (Team OpenAIdn), ikke Messaging

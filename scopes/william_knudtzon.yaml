@@ -1,0 +1,73 @@
+# Scope: William Knudtzon — Team Scheduling
+# Notes are in Norwegian (may contain English terms). Do not translate.
+# Opprettet 2026-10-30 etter at Fredrik Pedersen (Team Patient) meldte at
+# kalendernotater havnet hos ham. Bygget fra Williams features i Productboard:
+# Booking calendar (timebok), Calendar feature requests, Time slot management,
+# Register attendance for group appointments, Automatically journal when
+# appointment is cancelled, Suppress appointment notification, Helsenorge
+# integration – appointments, DigiHelsestasjon.
+
+pm_email: william.knudtzon@aidn.no
+pm_name: William Knudtzon
+team: Team Scheduling
+
+description_no: |
+  William eier Team Scheduling: kalender og avtaler for ansatte i Aidn.
+  Avdelingskalender, timebok/bookingkalender, timeluker, gruppeavtaler,
+  deltakere/inviterte på avtaler, avlysning, og varsler/SMS knyttet til
+  avtaler. Alt som handler om hvordan en avtale opprettes, vises, planlegges
+  eller varsles skal hit — også når pasienten eller pårørende mottar varselet.
+
+includes:
+  - Kalender generelt (kalendervisning, kalenderoppføringer, oversikt over avtaler)
+  - Avdelingskalender og felles kalender for avdeling/bolig
+  - Oversikt over eksterne avtaler (lege, sykehus, tannlege) for bemanningsplanlegging
+  - Timebok / bookingkalender, timeluker og ledige timer
+  - Legge til deltakere/inviterte på avtaler (enkeltpersoner, hele avdelingen)
+  - Gruppeavtaler, gruppeaktiviteter/gruppetrening i kalender, oppmøteregistrering
+  - Avlysning og endring av avtaler, journalføring ved avlyst avtale
+  - SMS-/varsler og påminnelser ved avtaler (til pasient, pårørende eller ansatt)
+  - Avtaler mot Helsenorge (timer som vises/synkroniseres til Helsenorge)
+
+excludes:
+  - Mitt Aidn-portalen som flate (innlogging, innbyggerdialog, skjema, samtykke) → Fredrik (Team Patient)
+  - Oppgaver/tiltak fra pasientens plan eller journal                          → Line (CPR)
+  - Oppgaver mellom kollegaer, arbeidslister, tavler                             → Ashild (Collaboration)
+  - Turnus/rute-/vaktplanlegging                                                 → Team Workforce
+  - Meldinger/e-meldinger/dialogmeldinger                                        → Hanne (Messaging)
+  - Timeavtaler og innkalling i helsestasjonskontekst                            → Adil (Health Station)
+
+tag_routes:
+  - "team scheduling"
+
+keywords_strong:
+  - kalender
+  - kalenderen
+  - avdelingskalender
+  - kalenderbok
+  - kalenderboka
+  - timebok
+  - bookingkalender
+  - timeluke
+  - timeluker
+  - gruppeavtale
+  - gruppeaktivitet
+  - gruppetrening
+  - oppmøteregistrering
+  - eksterne avtaler
+  - avlyst avtale
+  - påminnelse om avtale
+  - sms ved avtale
+
+disambiguations:
+  - term: kalender / avtale
+    route_here_when: [kalender, avdelingskalender, avtale, timebok, inviterte, deltakere, gruppeavtale, avlysning, sms-varsel ved avtale]
+    route_elsewhere_when:
+      - selve Mitt Aidn-portalen (innlogging, skjema, innbyggerdialog), ikke avtalen → fredrik.pedersen@aidn.no (Patient)
+      - helsestasjon, skolehelse, jordmor → adil.rashid@aidn.no (Health Station)
+      - turnus, vaktplan, ruteplanlegging → Team Workforce (holdes åpen hvis ingen PM)
+  - term: oppgaver
+    route_here_when: [avtale i kalender, ekstern avtale]
+    route_elsewhere_when:
+      - oppgaver fra plan/tiltak/journal → line.adde@aidn.no (CPR)
+      - oppgaver mellom kollegaer, arbeidslister → ashild.herdlevaer@aidn.no (Collaboration)

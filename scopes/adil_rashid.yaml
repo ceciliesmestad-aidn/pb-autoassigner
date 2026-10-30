@@ -28,7 +28,7 @@ includes:
 excludes:
   - Journalføring generelt (utenfor helsestasjon)   → Line (CPR)
   - Legemidler/vaksinasjon i institusjon/hjemmetj.  → Sandra (Treatment)
-  - Timebestilling for pasient generelt             → Fredrik Pedersen (Patient)
+  - Kalender/timeavtaler generelt (utenfor helsestasjon) → William Knudtzon (Scheduling)
   - Meldinger/dialogmeldinger generelt              → Hanne (Messaging)
 
 tag_routes:
@@ -58,4 +58,5 @@ disambiguations:
   - term: time / innkalling
     route_here_when: [helsestasjon, skolehelse, jordmor, kontroll]
     route_elsewhere_when:
-      - pasient bestiller selv, Mitt Aidn → fredrik.pedersen@aidn.no (Patient)
+      - kalender/avtaler utenfor helsestasjon → william.knudtzon@aidn.no (Scheduling)
+      - selve Mitt Aidn-portalen → fredrik.pedersen@aidn.no (Patient)

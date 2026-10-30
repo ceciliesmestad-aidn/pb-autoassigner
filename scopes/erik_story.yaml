@@ -28,7 +28,7 @@ includes:
 
 excludes:
   - Mitt Aidn / pasientportal-funksjoner          → Fredrik (Team Patient)
-  - Portal-kalender og avdelingskalender          → Fredrik (Team Patient)
+  - Kalender, avdelingskalender og avtaler        → William (Team Scheduling)
   - Innbyggerdialog og selvbetjening              → Fredrik (Team Patient)
   - Helsenorge / KS DigiHelse-integrasjoner       → Fredrik (Team Patient)
   - Tale-til-tekst i kartlegging/saksbehandling   → Kristin (Case Handling)

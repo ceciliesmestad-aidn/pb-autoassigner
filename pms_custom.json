@@ -28,5 +28,11 @@
     "name": "Magne Davidsen",
     "team": "Team Data Migrations",
     "scope_file": "magne_davidsen"
+  },
+  {
+    "email": "william.knudtzon@aidn.no",
+    "name": "William Knudtzon",
+    "team": "Team Scheduling",
+    "scope_file": "william_knudtzon"
   }
 ]

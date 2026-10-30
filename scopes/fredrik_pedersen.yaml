@@ -11,14 +11,13 @@ team: Team Patient
 
 description_no: |
   Fredrik eier Team Patient: pasientens egne flater (Mitt Aidn-portalen,
-  pasientportal-funksjoner), portal-/avdelings-kalender og kalendersamarbeid,
-  innbyggerdialog og selvbetjening, samt tilgrensende integrasjoner mot
+  pasientportal-funksjoner), innbyggerdialog og selvbetjening, samt tilgrensende integrasjoner mot
   Helsenorge og KS DigiHelse. Klassisk "alt pasient ser og rører".
+  Kalender og avtaler eies IKKE av Fredrik — de går til William Knudtzon
+  (Team Scheduling), endret 2026-10-30 etter innspill fra Fredrik.
 
 includes:
   - Mitt Aidn / MittAidn / "Mitt Aiden" (vanlig stavefeil) — pasientportal
-  - Portal-kalender, timebestilling for pasient
-  - Avdelingskalender, kalendersamarbeid internt
   - Pasient-selvbetjening
   - Samtykkeadministrasjon og pårørende-tilgang via Mitt Aidn
   - Innbyggerdialog og meldingsutveksling via Mitt Aidn
@@ -29,8 +28,6 @@ includes:
   - Egne skjema til søkere i Mitt Aidn
   - Ruting av søknader/henvendelser i Mitt Aidn
   - ExorLive-deling via innbyggerløsning (Mitt Aidn)
-  - Gruppeaktiviteter / gruppetrening i kalender
-  - Varsler og SMS-påminnelser til pasient ved avtaler
   - Mitt Aidn-app (mobiltilgang for pasient/pårørende)
 
 excludes:
@@ -38,6 +35,7 @@ excludes:
   - Faktura + arbeidsflyt                        → Jens (Back Office)
   - Søknadssaksbehandling (endringer etter innsending, søknadsflyt internt) → Team Case Handling
   - Tale-til-tekst i kartlegging/saksbehandling  → Kristin (Case Handling)
+  - Kalender, avdelingskalender, timebok, avtaler, gruppeavtaler, SMS-/varsler ved avtaler → William (Team Scheduling)
 
 tag_routes:
   - "team patient"
@@ -45,24 +43,22 @@ tag_routes:
 keywords_strong:
   - mitt aidn
   - mittaidn
-  - portal-kalender
   - pasientportal
   - pasient-selvbetjening
-  - avdelingskalender
   - helsenorge-integrasjon
   - samtykkeadministrasjon
   - pårørende-tilgang
   - innbyggerdialog
   - ks digihelse
   - exorlive
-  - varsler til pasient
   - mitt aidn app
-  - gruppeaktiviteter
 
 disambiguations:
-  - "'Avdelingskalender' tilhører Fredrik (kalendervisning/samarbeid), ikke rute-/turnusplanlegging → Team Workforce"
+  - "Kalender/avtaler (også avdelingskalender, timebok og SMS ved avtaler) → William Knudtzon (Team Scheduling), ikke Fredrik. Fredrik kun når notatet handler om selve Mitt Aidn-portalen, ikke om avtalen"
   - "'Digitale klager' via Mitt Aidn → Fredrik; klagesaksbehandling internt → Team Case Handling"
   - "'Tale-til-tekst' / AI-funksjoner → Erik (Team AI & Automation), selv om de eksponeres i pasientportalen"
 
 hard_negatives:
   - "manuell avslutning av flyt"  # → Erik Story (Team Automation), ikke Fredrik
+  - "avdelingskalender"  # → William Knudtzon (Team Scheduling), ikke Fredrik
+  - "timebok"  # → William Knudtzon (Team Scheduling), ikke Fredrik
