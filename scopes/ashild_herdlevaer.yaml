@@ -8,12 +8,18 @@ team: Team Collaboration
 description_no: |
   Ashild eier samhandling: oppgaver mellom brukere, arbeidslister, tavler,
   kommunikasjon internt i kommunen, intern oppgavefordeling.
+  Eier også ruteplanlegging (ruteplanlegger i hjemmetjenesten, kriterier for
+  ruter), turnus og vaktplan. Lagt til 2026-10-30 — disse ble tidligere sendt
+  til et ikke-eksisterende "Team Workforce" og ble liggende ufordelt.
 
 includes:
   - Oppgaver mellom kollegaer (ikke pasient/journal, ikke saksbehandling)
   - Arbeidslister, tavler
   - Intern kommunikasjon
   - Samhandlingsflyt
+  - Ruteplanlegging / ruteplanlegger (hjemmetjenesten, kjøreruter, kriterier for ruter)
+  - Turnus og turnusplanlegging
+  - Vaktplan, vaktplanlegging, bemanning per vakt
 
 excludes:
   - Oppgaver i journal/kartleggings-kontekst   → Line (CPR)
@@ -26,6 +32,14 @@ keywords_strong:
   - arbeidsliste
   - tavle
   - samhandling
+  - ruteplanlegger
+  - ruteplanlegging
+  - ruteplan
+  - kjørerute
+  - turnus
+  - turnusplan
+  - vaktplan
+  - vaktplanlegging
 
 disambiguations:
   - term: oppgaver
@@ -33,3 +47,6 @@ disambiguations:
     route_elsewhere_when:
       - [journal, kartlegging, pasient] → line.adde@aidn.no
       - [tjeneste, vedtak, saksbehandl] → kristin.shovick@aidn.no
+  - term: ruteplanlegger / turnus / vaktplan
+    default_route_here: true
+    note: "Alltid Ashild (Team Collaboration), høy konfidens. Skal IKKE holdes åpen."

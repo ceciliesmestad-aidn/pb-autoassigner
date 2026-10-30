@@ -33,7 +33,7 @@ excludes:
   - Mitt Aidn-portalen som flate (innlogging, innbyggerdialog, skjema, samtykke) → Fredrik (Team Patient)
   - Oppgaver/tiltak fra pasientens plan eller journal                          → Line (CPR)
   - Oppgaver mellom kollegaer, arbeidslister, tavler                             → Ashild (Collaboration)
-  - Turnus/rute-/vaktplanlegging                                                 → Team Workforce
+  - Ruteplanlegging, turnus og vaktplan                                          → Ashild (Collaboration)
   - Meldinger/e-meldinger/dialogmeldinger                                        → Hanne (Messaging)
   - Timeavtaler og innkalling i helsestasjonskontekst                            → Adil (Health Station)
 
@@ -65,7 +65,7 @@ disambiguations:
     route_elsewhere_when:
       - selve Mitt Aidn-portalen (innlogging, skjema, innbyggerdialog), ikke avtalen → fredrik.pedersen@aidn.no (Patient)
       - helsestasjon, skolehelse, jordmor → adil.rashid@aidn.no (Health Station)
-      - turnus, vaktplan, ruteplanlegging → Team Workforce (holdes åpen hvis ingen PM)
+      - ruteplanlegger, turnus, vaktplan → ashild.herdlevaer@aidn.no (Collaboration)
   - term: oppgaver
     route_here_when: [avtale i kalender, ekstern avtale]
     route_elsewhere_when:
