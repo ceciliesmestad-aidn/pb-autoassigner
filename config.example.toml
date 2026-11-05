@@ -83,8 +83,12 @@ owner_mention = ""
 # (`python -m backend.cli zendesk-transfer --dry-run`).
 enabled = false
 base_url = "https://aidnsupport.zendesk.com"
-# Integration user + API token. Prefer env vars ZENDESK_EMAIL / ZENDESK_API_TOKEN.
-# Never commit real values.
+# Auth: OAuth client (client-credentials grant), what Aidn uses. Prefer env
+# vars ZENDESK_OPERATOR_OAUTH_CLIENT_ID / _SECRET. Never commit real values.
+oauth_client_id = ""
+oauth_client_secret = ""
+oauth_scope = "read write"
+# Alternative auth: integration user + API token (env ZENDESK_EMAIL / ZENDESK_API_TOKEN).
 email = ""
 api_token = ""
 # Productboard member who owns transferred notes (head of support).

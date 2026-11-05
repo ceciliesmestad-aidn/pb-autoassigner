@@ -312,10 +312,12 @@ Some suggestions in PB are really support requests. A human adds the PB tag **`s
 - **No requester email** → nothing sent, tag stays, Slack lists the note (Cecilie: "then it just stays").
 - **Run order:** transfers run before ingest; `ingest(exclude_tag=…)` keeps tagged notes away from the classifier/autopilot.
 - **Owner check:** a live run is blocked unless `pb_owner_email` is found via `GET /v2/members`.
-- **Commands:** `python -m backend.cli zendesk-transfer --dry-run` (read-only, lists what would happen), `python -m backend.cli zendesk-transfer` (live, needs `enabled = true`).
-- **Config:** `[zendesk]` (`enabled` default false). Secrets via env `ZENDESK_EMAIL` / `ZENDESK_API_TOKEN` (GitHub secrets; already wired into `daily-run.yml`).
+- **Commands:** `python -m backend.cli zendesk-transfer --dry-run` (read-only, lists what would happen), `python -m backend.cli zendesk-transfer` (live, needs `enabled = true`), `python -m backend.cli zendesk-transfer --only <uuid>` (live for one tagged note, allowed while disabled — for testing).
+- **Manual GitHub workflow:** `.github/workflows/zendesk-transfer.yml` (Actions → "Zendesk transfer (manual)"), mode `dry-run` or `one-note` + `note_id`. Shares the DB cache and concurrency group with the daily run.
+- **Auth (2026-11-05):** Knut Ole set up a Zendesk **OAuth client with the client-credentials grant**, acting as the operator user. Repo secrets `ZENDESK_OPERATOR_OAUTH_CLIENT_ID` / `ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET` → `[zendesk].oauth_client_id/_secret`; the client exchanges them at `POST /oauth/tokens` (scope `read write`) for a cached bearer token. API-token auth (`ZENDESK_EMAIL` / `ZENDESK_API_TOKEN`) still works as a fallback; OAuth wins when both are set.
+- **Config:** `[zendesk]` (`enabled` default false). Secrets are wired into `daily-run.yml` and `zendesk-transfer.yml`.
 - **Verified live 2026-11-05:** first `--dry-run` on Cecilie's Mac found her test note, `owner_verified: true` (so `GET /v2/members` shape works) and resolved the requester email.
-- **⚠️ Still needs live verification:** (1) the `set owner` / `set processed` patch ops in one PATCH, (2) Zendesk accepting `requester {email, name}` for new end users and firing the "received" trigger. Both are covered by the first real transfer once the Zendesk token exists. Setup steps: `docs/zendesk_transfer_setup.md`.
+- **⚠️ Still needs live verification:** (1) the OAuth token exchange (body shape, `read write` scope), (2) the `set owner` / `set processed` patch ops in one PATCH, (3) Zendesk accepting `requester {email, name}` for new end users and firing the "received" trigger. All three are covered by the first `one-note` run of Cecilie's test note `fdcd4574-0d47-4497-9857-b0a75fa51a85`. Setup steps: `docs/zendesk_transfer_setup.md`.
 
 ## Troubleshooting
 

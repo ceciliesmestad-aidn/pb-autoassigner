@@ -465,3 +465,77 @@ def test_zendesk_client_finds_oldest_by_external_id(monkeypatch):
             {"id": 3, "created_at": "2026-11-05T08:00:00Z"}]}, 200))
     zc = ZendeskClient(base_url="https://aidnsupport.zendesk.com", email="e", api_token="t")
     assert zc.find_by_external_id("productboard:n1")["id"] == 3
+
+
+# ─── OAuth client credentials + one-note runs (added 2026-11-05) ─────────────
+
+CLIENT_SECRET = "oauth-client-secret-xyz"
+
+
+def test_zendesk_client_oauth_fetches_token_once_and_uses_bearer(monkeypatch):
+    calls = []
+
+    def fake_urlopen(req, context=None, timeout=None):
+        calls.append(req)
+        if req.full_url.endswith("/oauth/tokens"):
+            return _Resp({"access_token": "tok-1", "token_type": "bearer"}, 200)
+        return _Resp({"tickets": []}, 200)
+    monkeypatch.setattr("backend.zendesk_client.urllib.request.urlopen", fake_urlopen)
+    zc = ZendeskClient(base_url="https://aidnsupport.zendesk.com",
+                       oauth_client_id="cid", oauth_client_secret=CLIENT_SECRET)
+    zc.find_by_external_id("productboard:a")
+    zc.find_by_external_id("productboard:b")
+    token_calls = [c for c in calls if c.full_url.endswith("/oauth/tokens")]
+    assert len(token_calls) == 1, "token is cached between calls"
+    sent = json.loads(token_calls[0].data)
+    assert sent == {"grant_type": "client_credentials", "client_id": "cid",
+                    "client_secret": CLIENT_SECRET, "scope": "read write"}
+    api = [c for c in calls if "/api/v2/" in c.full_url]
+    assert all(c.get_header("Authorization") == "Bearer tok-1" for c in api)
+
+
+def test_zendesk_client_oauth_failure_is_certain_and_hides_secret(monkeypatch):
+    def deny(req, context=None, timeout=None):
+        import io
+        raise urllib.error.HTTPError(req.full_url, 401, "x", {},
+                                     io.BytesIO(b'{"error":"invalid_client"}'))
+    monkeypatch.setattr("backend.zendesk_client.urllib.request.urlopen", deny)
+    zc = ZendeskClient(base_url="https://aidnsupport.zendesk.com",
+                       oauth_client_id="cid", oauth_client_secret=CLIENT_SECRET)
+    with pytest.raises(ZendeskError) as ei:
+        zc.create_ticket(subject="S", body="B", requester_email="a@b.no",
+                         requester_name="a", external_id="x", tags=[])
+    assert ei.value.uncertain is False and ei.value.status == 401
+    assert CLIENT_SECRET not in str(ei.value)
+
+
+def test_make_client_prefers_oauth_and_reads_env(monkeypatch, tmp_path):
+    from backend.config import load_config
+    monkeypatch.setenv("ZENDESK_OPERATOR_OAUTH_CLIENT_ID", "cid")
+    monkeypatch.setenv("ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET", CLIENT_SECRET)
+    cfg = load_config(tmp_path / "missing.toml")
+    cfg.zendesk.email, cfg.zendesk.api_token = "e@aidn.no", "t"
+    zc = zendesk_transfer.make_client(cfg)
+    assert zc.uses_oauth and zc.oauth_client_secret == CLIENT_SECRET and zc.api_token == ""
+    assert zendesk_transfer.make_client(Config()) is None
+
+
+def test_only_restricts_to_one_tagged_note(zcfg):
+    pb = FakeTransferPB([v2_note("a"), v2_note("b"), v2_note("c", tags=())])
+    zd = FakeZendesk()
+    stats = run(zcfg, pb, zd, only={"b", "c"})
+    assert stats["found"] == 1 and [c["external_id"] for c in zd.creates] == ["productboard:b"]
+    assert pb.tags("a") == ["send-to-zendesk"]
+
+
+def test_cli_one_note_runs_while_disabled_but_full_live_run_does_not(zcfg, monkeypatch):
+    from backend import cli
+    zcfg.zendesk.enabled = False
+    pb, zd = FakeTransferPB([v2_note("a"), v2_note("b")]), FakeZendesk()
+    monkeypatch.setattr(cli, "load_config", lambda path=None: zcfg)
+    monkeypatch.setattr(cli, "_pb_or_die", lambda cfg: pb)
+    monkeypatch.setattr(zendesk_transfer, "make_client", lambda cfg: zd)
+    assert cli.main(["zendesk-transfer"]) == 1 and zd.creates == []
+    assert cli.main(["zendesk-transfer", "--only", "b"]) == 0
+    assert [c["external_id"] for c in zd.creates] == ["productboard:b"]
+    assert pb.tags("a") == ["send-to-zendesk"] and pb.tags("b") == ["sent-to-zendesk"]

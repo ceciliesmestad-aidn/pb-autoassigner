@@ -129,8 +129,13 @@ class ZendeskConfig:
     """
     enabled: bool = False
     base_url: str = "https://aidnsupport.zendesk.com"
-    # Integration/agent user + API token. Prefer env vars ZENDESK_EMAIL and
-    # ZENDESK_API_TOKEN (GitHub secrets in the cloud). Never commit them.
+    # Auth option 1 (Aidn's setup): OAuth client with the client-credentials
+    # grant. Env ZENDESK_OPERATOR_OAUTH_CLIENT_ID / _SECRET. Wins over option 2.
+    oauth_client_id: str = ""
+    oauth_client_secret: str = ""
+    oauth_scope: str = "read write"
+    # Auth option 2: integration user + API token. Env ZENDESK_EMAIL /
+    # ZENDESK_API_TOKEN. Never commit either option's values.
     email: str = ""
     api_token: str = ""
     # Productboard member who owns transferred notes (head of support).
@@ -222,6 +227,10 @@ def load_config(path: Path | str | None = None) -> Config:
         cfg.zendesk.email = env_zd_email
     if env_zd_token := os.environ.get("ZENDESK_API_TOKEN"):
         cfg.zendesk.api_token = env_zd_token
+    if env_zd_cid := os.environ.get("ZENDESK_OPERATOR_OAUTH_CLIENT_ID"):
+        cfg.zendesk.oauth_client_id = env_zd_cid
+    if env_zd_csec := os.environ.get("ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET"):
+        cfg.zendesk.oauth_client_secret = env_zd_csec
 
     return cfg
 

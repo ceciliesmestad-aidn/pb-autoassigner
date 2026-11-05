@@ -13,8 +13,9 @@ Used only by backend/zendesk_transfer.py to turn Productboard notes tagged
   add_internal_note()    PUT  /api/v2/tickets/{id}.json with a private comment
                          (the Productboard link, which the requester must not see).
 
-Auth: API token, Basic auth as "<agent email>/token:<api token>". Both come from
-config or the env vars ZENDESK_EMAIL / ZENDESK_API_TOKEN, never from code.
+Auth: OAuth client credentials (env ZENDESK_OPERATOR_OAUTH_CLIENT_ID /
+ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET — what Aidn uses), or an API token
+(env ZENDESK_EMAIL / ZENDESK_API_TOKEN). Never from code.
 
 Errors never carry response bodies or ticket content in their message, so they
 are safe to log and to store in the database.
@@ -25,6 +26,7 @@ import base64
 import json
 import logging
 import ssl
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -52,9 +54,20 @@ class ZendeskError(Exception):
 
 @dataclass
 class ZendeskClient:
+    """Two ways to authenticate (OAuth wins when both are set):
+
+    - OAuth client credentials (machine-to-machine): `oauth_client_id` +
+      `oauth_client_secret` are exchanged at POST /oauth/tokens for a bearer
+      token, which is cached until shortly before it expires. Tickets are
+      created as the user the OAuth client acts for (Aidn: the operator user).
+    - API token: Basic auth as "<email>/token:<api_token>".
+    """
     base_url: str                 # e.g. https://aidnsupport.zendesk.com
-    email: str                    # agent / integration user email
-    api_token: str
+    email: str = ""               # API-token auth: agent / integration user email
+    api_token: str = ""
+    oauth_client_id: str = ""
+    oauth_client_secret: str = ""
+    oauth_scope: str = "read write"
     ssl_verify: bool = True
     timeout_seconds: float = 30.0
 
@@ -62,13 +75,56 @@ class ZendeskClient:
         self.base_url = (self.base_url or "").rstrip("/")
         if not self.base_url.startswith("https://"):
             raise ValueError("zendesk base_url must start with https://")
+        self._access_token = ""
+        self._token_expires_at = 0.0
+
+    @property
+    def uses_oauth(self) -> bool:
+        return bool(self.oauth_client_id and self.oauth_client_secret)
 
     # ─── internals ────────────────────────────────────────────────────────────
 
+    def _oauth_token(self) -> str:
+        """Bearer token from the client-credentials grant, cached per client."""
+        if self._access_token and time.time() < self._token_expires_at - 60:
+            return self._access_token
+        body = {"grant_type": "client_credentials",
+                "client_id": self.oauth_client_id,
+                "client_secret": self.oauth_client_secret,
+                "scope": self.oauth_scope}
+        req = urllib.request.Request(
+            self.base_url + "/oauth/tokens", data=json.dumps(body).encode(), method="POST",
+            headers={"Content-Type": "application/json", "Accept": "application/json"})
+        try:
+            with urllib.request.urlopen(req, context=self._ssl_context(),
+                                        timeout=self.timeout_seconds) as resp:
+                payload = json.loads(resp.read() or b"{}")
+        except urllib.error.HTTPError as e:
+            code = ""
+            try:
+                code = str((json.loads(e.read() or b"{}") or {}).get("error") or "")[:60]
+            except Exception:  # noqa: BLE001
+                pass
+            # Getting a token creates nothing in Zendesk, so this is never uncertain.
+            raise ZendeskError(e.code, f"oauth {code}".strip()) from None
+        except (TimeoutError, urllib.error.URLError, ConnectionError, OSError) as e:
+            raise ZendeskError(None, f"oauth {type(e).__name__}") from None
+        token = payload.get("access_token") or ""
+        if not token:
+            raise ZendeskError(200, "oauth: no access_token in response")
+        self._access_token = token
+        # Zendesk tokens may or may not expire; default to one hour of reuse.
+        self._token_expires_at = time.time() + float(payload.get("expires_in") or 3600)
+        return token
+
     def _headers(self) -> dict[str, str]:
-        raw = f"{self.email}/token:{self.api_token}".encode()
+        if self.uses_oauth:
+            auth = "Bearer " + self._oauth_token()
+        else:
+            raw = f"{self.email}/token:{self.api_token}".encode()
+            auth = "Basic " + base64.b64encode(raw).decode()
         return {
-            "Authorization": "Basic " + base64.b64encode(raw).decode(),
+            "Authorization": auth,
             "Content-Type": "application/json",
             "Accept": "application/json",
         }

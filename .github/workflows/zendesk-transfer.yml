@@ -1,0 +1,87 @@
+# Manual Productboard → Zendesk transfer (added 2026-11-05).
+#
+# For testing before the daily run is switched on ([zendesk].enabled = true in
+# config.ci.toml). GitHub → Actions → "Zendesk transfer (manual)" → Run workflow.
+#
+#   mode = dry-run   read-only: lists the tagged notes and what would happen
+#   mode = one-note  sends ONLY the note whose PB UUID you paste in note_id.
+#                    The note must still carry the send-to-zendesk tag.
+#
+# Required repo secrets:
+#   PB_TOKEN                               Productboard API token
+#   ZENDESK_OPERATOR_OAUTH_CLIENT_ID       Zendesk OAuth client (client-credentials grant)
+#   ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET
+#   SLACK_WEBHOOK_URL                      optional, for the result message
+#
+# Shares the note database (Actions cache) and the concurrency group with the
+# daily run, so the two never run at the same time and both see the same
+# note → ticket mapping. The log shows counts, PB links and masked emails only.
+
+name: Zendesk transfer (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run = read only. one-note = send the note below"
+        type: choice
+        options: [dry-run, one-note]
+        default: dry-run
+      note_id:
+        description: "PB note UUID (only for one-note)"
+        type: string
+        required: false
+
+concurrency:
+  group: pb-assigner-daily
+  cancel-in-progress: false
+
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Restore note database from previous run
+        uses: actions/cache/restore@v4
+        with:
+          path: data/pb_assigner.db
+          key: pb-assigner-db-${{ github.run_id }}
+          restore-keys: |
+            pb-assigner-db-
+
+      - name: Install
+        run: |
+          mkdir -p data
+          pip install -e .
+
+      - name: Run transfer
+        env:
+          PB_TOKEN: ${{ secrets.PB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ZENDESK_OPERATOR_OAUTH_CLIENT_ID: ${{ secrets.ZENDESK_OPERATOR_OAUTH_CLIENT_ID }}
+          ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET: ${{ secrets.ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET }}
+          MODE: ${{ inputs.mode }}
+          NOTE_ID: ${{ inputs.note_id }}
+        run: |
+          if [ "$MODE" = "one-note" ]; then
+            # Inputs are passed through env, never pasted into the script.
+            if ! printf '%s' "$NOTE_ID" | grep -Eq '^[0-9a-fA-F-]{36}$'; then
+              echo "note_id must be a PB note UUID (36 characters)"; exit 1
+            fi
+            python -m backend.cli --config config.ci.toml zendesk-transfer --only "$NOTE_ID"
+          else
+            python -m backend.cli --config config.ci.toml zendesk-transfer --dry-run
+          fi
+
+      - name: Save note database for next run
+        if: always() && inputs.mode == 'one-note'
+        uses: actions/cache/save@v4
+        with:
+          path: data/pb_assigner.db
+          key: pb-assigner-db-${{ github.run_id }}

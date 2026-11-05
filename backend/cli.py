@@ -96,6 +96,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_zd.add_argument("--dry-run", action="store_true",
                       help="Read-only: no Zendesk ticket, no PB change, no DB row.")
+    p_zd.add_argument("--only", action="append", default=None, metavar="NOTE_UUID",
+                      help="Only this tagged note (repeatable). A live run with "
+                           "--only works even while [zendesk].enabled = false, so "
+                           "one note can be tested before the daily run is switched on.")
 
     p_serve = sub.add_parser("serve")
     p_serve.add_argument("--host", default=None)
@@ -241,13 +245,16 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "zendesk-transfer":
-        client = _pb_or_die(cfg)
-        if not args.dry_run and not cfg.zendesk.enabled:
+        only = {u.strip() for u in (args.only or []) if u.strip()} or None
+        if not args.dry_run and not cfg.zendesk.enabled and not only:
             print("Zendesk transfer is disabled ([zendesk].enabled = false). "
-                  "Use --dry-run to preview.", file=sys.stderr)
+                  "Use --dry-run to preview, or --only <note-uuid> to test one note.",
+                  file=sys.stderr)
             return 1
+        client = _pb_or_die(cfg)
         with db.connect(cfg.db_path) as conn:
-            stats = zendesk_transfer.run_transfers(conn, client, cfg, dry_run=args.dry_run)
+            stats = zendesk_transfer.run_transfers(conn, client, cfg,
+                                                   dry_run=args.dry_run, only=only)
         print(json.dumps(stats, indent=2, ensure_ascii=False))
         if not args.dry_run:
             notify.send_zendesk_report(cfg, stats)

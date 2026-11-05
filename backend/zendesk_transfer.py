@@ -126,11 +126,20 @@ def _ok(status) -> bool:
 
 
 def make_client(cfg: Config) -> ZendeskClient | None:
+    """OAuth client credentials if set, else API token, else None."""
     z = cfg.zendesk
-    if not (z.base_url and z.email and z.api_token):
+    has_oauth = bool(z.oauth_client_id and z.oauth_client_secret)
+    has_token = bool(z.email and z.api_token)
+    if not z.base_url or not (has_oauth or has_token):
         return None
-    return ZendeskClient(base_url=z.base_url, email=z.email, api_token=z.api_token,
-                         ssl_verify=z.ssl_verify, timeout_seconds=z.timeout_seconds)
+    return ZendeskClient(
+        base_url=z.base_url,
+        email=z.email if not has_oauth else "",
+        api_token=z.api_token if not has_oauth else "",
+        oauth_client_id=z.oauth_client_id if has_oauth else "",
+        oauth_client_secret=z.oauth_client_secret if has_oauth else "",
+        oauth_scope=z.oauth_scope,
+        ssl_verify=z.ssl_verify, timeout_seconds=z.timeout_seconds)
 
 
 # ─── one note ─────────────────────────────────────────────────────────────────
@@ -262,9 +271,14 @@ def transfer_note(conn: sqlite3.Connection, pb, zd: ZendeskClient | None,
 # ─── the scan ─────────────────────────────────────────────────────────────────
 
 def run_transfers(conn: sqlite3.Connection, pb, cfg: Config, *,
-                  zd: ZendeskClient | None = None, dry_run: bool = False) -> dict:
+                  zd: ZendeskClient | None = None, dry_run: bool = False,
+                  only: set[str] | None = None) -> dict:
     """Scan PB for the trigger tag and transfer each note. Never raises for a
-    single note — one failure does not stop the others."""
+    single note — one failure does not stop the others.
+
+    `only`: restrict to these PB note UUIDs (manual one-note test). The note
+    must still carry the trigger tag — the tag stays the human approval.
+    """
     z = cfg.zendesk
     stats: dict = {k: 0 for k in OUTCOMES}
     stats.update(dry_run=dry_run, found=0, notes=[], blocked="")
@@ -295,6 +309,9 @@ def run_transfers(conn: sqlite3.Connection, pb, cfg: Config, *,
         log.error("zendesk: PB scan failed (%s)", type(e).__name__)
         stats["blocked"] = f"pb scan failed: {type(e).__name__}"
         return stats
+    if only is not None:
+        tagged = [n for n in tagged if n.get("id") in only]
+        stats["only"] = sorted(only)
     stats["found"] = len(tagged)
     log.info("zendesk: %d note(s) tagged %r", len(tagged), z.trigger_tag)
 

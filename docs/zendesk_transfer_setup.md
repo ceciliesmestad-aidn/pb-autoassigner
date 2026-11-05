@@ -2,63 +2,57 @@
 
 Når noen setter taggen `send-to-zendesk` på et notat i Productboard, lager AutoAssigner en supportsak i Zendesk. Innsenderen får vanlig «vi har mottatt saken din»-e-post. Notatet får taggen `sent-to-zendesk`, blir tildelt Torstein og markert som prosessert.
 
-Funksjonen er **av** til du skrur den på i steg 5.
+Funksjonen er **av** i den daglige kjøringen til du skrur den på i steg 4.
 
-## 1. Få tilgang fra Knut Ole
+## 1. Tilgang (ferdig 2026-11-05)
 
-Send meldingen fra chatten, og vent på svar på punktene der. Uten API-token kan du bare gjøre steg 2.
+Knut Ole har lagt inn en OAuth-klient som repo-secrets i GitHub:
 
-## 2. Prøvekjøring uten Zendesk (kan gjøres nå)
+- `ZENDESK_OPERATOR_OAUTH_CLIENT_ID`
+- `ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET`
 
-1. Legg taggen `send-to-zendesk` på testforslaget ditt i Productboard.
-2. Åpne Terminal i mappen PB_assignerV2, og kjør én kommando om gangen:
+Klienten bruker «client credentials», og sakene opprettes som operatør-brukeren.
 
-```bash
-source .venv/bin/activate
-```
+## 2. Prøvekjøring i GitHub
+
+1. Gå til GitHub, åpne repoet `pb-autoassigner` og klikk **Actions**.
+2. Velg **Zendesk transfer (manual)** i lista til venstre.
+3. Klikk **Run workflow**, velg `mode = dry-run` og klikk den grønne knappen.
+4. Åpne kjøringen og steget **Run transfer**.
+
+Se etter:
+
+- `"owner_verified": true`
+- `"would_transfer": 1`
+
+Hvis Zendesk-innloggingen feiler, står det `oauth` i feilmeldingen.
+
+## 3. Én ekte overføring (testforslaget ditt)
+
+1. Klikk **Run workflow** igjen.
+2. Velg `mode = one-note`.
+3. Lim inn notat-ID-en i `note_id`. ID-en til testnotatet er `fdcd4574-0d47-4497-9857-b0a75fa51a85`.
+4. Sjekk i Zendesk: emne, tekst, deg som innsender, taggen `from_productboard` og et internt notat med PB-lenken.
+5. Sjekk i PB: taggen `sent-to-zendesk`, eier Torstein, prosessert, og `send-to-zendesk` er borte.
+6. Lukk testsaken i Zendesk.
+
+Bare notatet med denne ID-en blir sendt. Andre notater med taggen venter.
+
+## 4. Skru det på i den daglige kjøringen
+
+Sett `enabled = true` under `[zendesk]` i `config.ci.toml`, commit og push. Etter det tar den daglige kjøringen dette automatisk, og Slack-oppsummeringen viser tallene.
+
+## Lokalt på Macen (valgfritt)
+
+Hvis du har klient-ID og hemmelighet, kan du legge dem inn i `config.toml` under `[zendesk]`. Da fungerer de samme kommandoene lokalt:
 
 ```bash
 python -m backend.cli zendesk-transfer --dry-run
 ```
 
-Dette **leser bare**. Ingen sak lages, og PB endres ikke. Se etter:
-
-- `"found": 1`: notatet ditt ble funnet
-- `"owner_verified": true`: Torstein finnes i PB
-- `"outcome": "would_transfer"` og en skjult e-post (`k***@...`): innsenderen ble funnet
-- `"needs_review"`: notatet mangler innsender med e-post
-
-## 3. Legg inn Zendesk-nøkler
-
-**På Macen:** åpne `config.toml` og fyll inn `email` og `api_token` under `[zendesk]`. Filen blir aldri med i git.
-
-**I GitHub:** repo → Settings → Secrets and variables → Actions → New repository secret:
-
-- `ZENDESK_EMAIL`
-- `ZENDESK_API_TOKEN`
-
-Fyll inn `group_id` hvis Knut Ole gir deg en.
-
-## 4. Kjør prøvekjøringen på nytt
-
-Nå sjekker den også Zendesk om saken allerede finnes. Svaret skal fortsatt være `would_transfer`.
-
-## 5. Én ekte overføring (testforslaget ditt)
-
-1. Sett `enabled = true` under `[zendesk]` i `config.toml`.
-2. Kjør:
-
 ```bash
-python -m backend.cli zendesk-transfer
+python -m backend.cli zendesk-transfer --only <notat-id>
 ```
-
-3. Sjekk i Zendesk: emne, tekst, innsender, taggen `from_productboard` og et internt notat med PB-lenken.
-4. Sjekk i PB: taggen `sent-to-zendesk`, eier Torstein, prosessert, og `send-to-zendesk` er borte.
-5. Lukk testsaken i Zendesk.
-
-## 6. Skru det på i den daglige skykjøringen
-
-Sett `enabled = true` under `[zendesk]` i `config.ci.toml`, commit og push. Etter det tar den daglige kjøringen dette automatisk, og Slack-oppsummeringen viser tallene.
 
 ## Hvis noe går galt
 

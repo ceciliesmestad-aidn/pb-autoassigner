@@ -45,12 +45,13 @@ owner_mention = "<@U08GRQK3EH4>"
 
 [zendesk]
 # PB -> Zendesk transfer. Credentials come from GitHub secrets
-# ZENDESK_EMAIL / ZENDESK_API_TOKEN. Flip to true only after a clean
+# ZENDESK_OPERATOR_OAUTH_CLIENT_ID / _SECRET. Flip to true only after a clean
 # local dry-run and one verified live transfer.
 enabled = false
 base_url = "https://aidnsupport.zendesk.com"
-email = ""              # from env ZENDESK_EMAIL
-api_token = ""          # from env ZENDESK_API_TOKEN
+oauth_client_id = ""        # from env ZENDESK_OPERATOR_OAUTH_CLIENT_ID
+oauth_client_secret = ""    # from env ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET
+oauth_scope = "read write"
 pb_owner_email = "torstein.bore@aidn.no"
 trigger_tag = "send-to-zendesk"
 completed_tag = "sent-to-zendesk"

@@ -9,8 +9,8 @@
 #   PB_TOKEN            Productboard API token
 #   ANTHROPIC_API_KEY   Anthropic API key
 #   SLACK_WEBHOOK_URL   Incoming webhook for #productboard-assignment-alerts
-#   ZENDESK_EMAIL       Zendesk integration user (PB -> Zendesk transfer)
-#   ZENDESK_API_TOKEN   Zendesk API token for that user
+#   ZENDESK_OPERATOR_OAUTH_CLIENT_ID / _SECRET  Zendesk OAuth client (PB -> Zendesk
+#                       transfer, client-credentials grant)
 #   (the transfer only runs when [zendesk].enabled = true in config.ci.toml)
 #
 # The SQLite DB is carried between runs via the Actions cache. If the cache
@@ -58,8 +58,8 @@ jobs:
           PB_TOKEN: ${{ secrets.PB_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          ZENDESK_EMAIL: ${{ secrets.ZENDESK_EMAIL }}
-          ZENDESK_API_TOKEN: ${{ secrets.ZENDESK_API_TOKEN }}
+          ZENDESK_OPERATOR_OAUTH_CLIENT_ID: ${{ secrets.ZENDESK_OPERATOR_OAUTH_CLIENT_ID }}
+          ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET: ${{ secrets.ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET }}
         run: python -m backend.cli --config config.ci.toml run
 
       - name: Save note database for next run
