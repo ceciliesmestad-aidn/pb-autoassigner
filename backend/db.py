@@ -92,6 +92,49 @@ CREATE TABLE IF NOT EXISTS runs (
     finished_at  TEXT,
     stats_json   TEXT NOT NULL DEFAULT '{}'
 );
+
+-- Acknowledgment emails to municipality submitters (added 2026-10-28).
+-- TEST PHASE: rows are drafts only. Nothing in the codebase sends them.
+-- One row per note — a note is drafted (or skipped) at most once.
+CREATE TABLE IF NOT EXISTS ack_drafts (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    note_id          INTEGER NOT NULL UNIQUE REFERENCES notes(id) ON DELETE CASCADE,
+    status           TEXT    NOT NULL CHECK (status IN ('draft', 'skipped')),
+    skip_reason      TEXT    NOT NULL DEFAULT '',  -- no_customer | not_kommune | duplicate | lookup_failed | no_summary
+    recipient_email  TEXT    NOT NULL DEFAULT '',  -- only stored for kommune addresses
+    recipient_domain TEXT    NOT NULL DEFAULT '',
+    subject          TEXT    NOT NULL DEFAULT '',
+    summary          TEXT    NOT NULL DEFAULT '',
+    body             TEXT    NOT NULL DEFAULT '',
+    model            TEXT    NOT NULL DEFAULT '',
+    created_at       TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ack_drafts_created_at ON ack_drafts(created_at);
+
+-- Productboard → Zendesk transfers (added 2026-11-05). One row per PB note,
+-- the primary guard against creating two tickets for the same note (Zendesk
+-- does not enforce unique external_id). No note content or emails stored.
+--   pending        create was attempted, outcome unknown → look up before retry
+--   failed         create known NOT to have happened → safe to try again
+--   needs_review   no requester email → nothing is sent; tag stays on the note
+--   ticket_created ticket exists, PB updates not done yet → retry PB only
+--   completed      ticket exists and PB is updated
+CREATE TABLE IF NOT EXISTS zendesk_transfers (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    pb_uuid              TEXT    NOT NULL UNIQUE,
+    status               TEXT    NOT NULL
+                         CHECK (status IN ('pending', 'failed', 'needs_review',
+                                           'ticket_created', 'completed')),
+    zendesk_ticket_id    INTEGER,
+    zendesk_ticket_url   TEXT    NOT NULL DEFAULT '',
+    internal_note_added  INTEGER NOT NULL DEFAULT 0,
+    attempts             INTEGER NOT NULL DEFAULT 0,
+    last_error           TEXT    NOT NULL DEFAULT '',
+    created_at           TEXT    NOT NULL,
+    updated_at           TEXT    NOT NULL,
+    completed_at         TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_zendesk_transfers_status ON zendesk_transfers(status);
 """
 
 
@@ -512,6 +555,125 @@ def recent_autopilot_assignments(
         (f"-{hours} hours", limit),
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+def notes_needing_ack(conn: sqlite3.Connection, *, since: str,
+                      limit: int) -> list[sqlite3.Row]:
+    """Notes the AutoAssigner has assigned (autopilot or Reviewer) that have no
+    ack_drafts row yet. `since` (ISO date) keeps the backlog out: only notes
+    created in PB on/after that date qualify."""
+    return conn.execute(
+        """
+        SELECT n.*
+          FROM notes n
+         WHERE n.state = 'assigned'
+           AND n.pb_created_at >= ?
+           AND EXISTS (SELECT 1 FROM assignments a
+                        WHERE a.note_id = n.id
+                          AND a.pm_email != '__skipped__'
+                          AND a.pb_error IS NULL)
+           AND NOT EXISTS (SELECT 1 FROM ack_drafts d WHERE d.note_id = n.id)
+         ORDER BY n.pb_created_at
+         LIMIT ?
+        """,
+        (since, limit),
+    ).fetchall()
+
+
+def ack_prior_notes_for_recipient(conn: sqlite3.Connection,
+                                  recipient_email: str) -> list[tuple[str, str]]:
+    """(title, content) of every note this recipient already has a draft for.
+    Used to stop a resubmitted suggestion from getting a second confirmation."""
+    rows = conn.execute(
+        """
+        SELECT n.title, n.content FROM ack_drafts d JOIN notes n ON n.id = d.note_id
+         WHERE d.status = 'draft' AND d.recipient_email = ?
+        """,
+        (recipient_email,),
+    ).fetchall()
+    return [(r["title"] or "", r["content"] or "") for r in rows]
+
+
+def insert_ack_draft(conn: sqlite3.Connection, *, note_id: int, status: str,
+                     skip_reason: str = "", recipient_email: str = "",
+                     recipient_domain: str = "", subject: str = "",
+                     summary: str = "", body: str = "", model: str = "") -> None:
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO ack_drafts
+            (note_id, status, skip_reason, recipient_email, recipient_domain,
+             subject, summary, body, model, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (note_id, status, skip_reason, recipient_email, recipient_domain,
+         subject, summary, body, model, utcnow_iso()),
+    )
+
+
+def list_ack_drafts(conn: sqlite3.Connection, *, hours: int = 24,
+                    limit: int = 200) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT d.*, n.title, n.display_url, n.company, n.content
+          FROM ack_drafts d JOIN notes n ON n.id = d.note_id
+         WHERE d.created_at >= datetime('now', ?)
+         ORDER BY d.status, d.created_at DESC
+         LIMIT ?
+        """,
+        (f"-{hours} hours", limit),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+# ─── Zendesk transfers ────────────────────────────────────────────────────────
+
+def zendesk_transfer(conn: sqlite3.Connection, pb_uuid: str) -> dict | None:
+    row = conn.execute("SELECT * FROM zendesk_transfers WHERE pb_uuid = ?",
+                       (pb_uuid,)).fetchone()
+    return dict(row) if row else None
+
+
+def upsert_zendesk_transfer(conn: sqlite3.Connection, pb_uuid: str, *,
+                            status: str, zendesk_ticket_id: int | None = None,
+                            zendesk_ticket_url: str | None = None,
+                            internal_note_added: bool | None = None,
+                            last_error: str | None = None,
+                            count_attempt: bool = False) -> None:
+    """Insert or update the one row for this note. None = leave field as is.
+
+    A stored ticket id is never overwritten with NULL, so a note that has a
+    ticket can never lose it and get a second one.
+    """
+    now = utcnow_iso()
+    conn.execute(
+        """
+        INSERT INTO zendesk_transfers
+            (pb_uuid, status, zendesk_ticket_id, zendesk_ticket_url,
+             internal_note_added, attempts, last_error, created_at, updated_at,
+             completed_at)
+        VALUES (?, ?, ?, COALESCE(?, ''), COALESCE(?, 0), ?, COALESCE(?, ''), ?, ?,
+                CASE WHEN ? = 'completed' THEN ? END)
+        ON CONFLICT(pb_uuid) DO UPDATE SET
+            status              = excluded.status,
+            zendesk_ticket_id   = COALESCE(?, zendesk_transfers.zendesk_ticket_id),
+            zendesk_ticket_url  = COALESCE(?, zendesk_transfers.zendesk_ticket_url),
+            internal_note_added = COALESCE(?, zendesk_transfers.internal_note_added),
+            attempts            = zendesk_transfers.attempts + ?,
+            last_error          = COALESCE(?, zendesk_transfers.last_error),
+            updated_at          = excluded.updated_at,
+            completed_at        = CASE WHEN excluded.status = 'completed'
+                                       THEN COALESCE(zendesk_transfers.completed_at,
+                                                     excluded.updated_at)
+                                       ELSE zendesk_transfers.completed_at END
+        """,
+        (pb_uuid, status, zendesk_ticket_id, zendesk_ticket_url,
+         None if internal_note_added is None else int(internal_note_added),
+         1 if count_attempt else 0, last_error, now, now, status, now,
+         # ON CONFLICT parameters
+         zendesk_ticket_id, zendesk_ticket_url,
+         None if internal_note_added is None else int(internal_note_added),
+         1 if count_attempt else 0, last_error),
+    )
 
 
 def training_history(conn: sqlite3.Connection, pm_email: str) -> list[dict]:

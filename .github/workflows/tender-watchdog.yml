@@ -1,0 +1,74 @@
+# Weekly coverage check on the Tender Commitment board.
+#
+# Why this exists: the documented routine ("Managing tender requirements as
+# insights in Productboard") has no step that creates the per-tender
+# committed-deadline field, the board column, or the board filter. So tenders
+# quietly fall off the board — Bergen, Hadsel and Bø/Øksnes/Askøy/Løddingen all
+# had requirements logged with no committed-deadline field, which is what Pål
+# spotted on 2026-09-07.
+#
+# This job is READ-ONLY. It never writes to Productboard: v2 has no endpoint
+# for boards, and none for creating a custom field definition. It reads, it
+# compares, and it tells a human what to click.
+#
+# Schedule: Mondays 06:00 UTC = 08:00 CEST — lands before the week's planning,
+# an hour after the daily assignment run so the two never interleave.
+# Manual trigger: GitHub → Actions → "Tender commitment board watchdog".
+#
+# Required repo secrets (already present for the daily run):
+#   PB_TOKEN            Productboard API token
+#   SLACK_WEBHOOK_URL   Incoming webhook (currently #support-productboard)
+#
+# No database and no Anthropic key: this check is pure comparison, no LLM.
+
+name: Tender commitment board watchdog
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      no_slack:
+        description: "Print the report only, do not post to Slack"
+        type: boolean
+        default: false
+
+concurrency:
+  group: pb-assigner-tender-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          mkdir -p data
+          pip install -e .
+
+      - name: Check tender board coverage
+        env:
+          PB_TOKEN: ${{ secrets.PB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          python -m backend.cli --config config.ci.toml tender-watchdog \
+            ${{ inputs.no_slack && '--no-slack' || '' }} \
+            | tee tender-watchdog-report.json
+
+      # Kept as an artifact so a finding can be diffed week over week without
+      # scrolling back through Slack.
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tender-watchdog-report
+          path: tender-watchdog-report.json
+          retention-days: 90
+          if-no-files-found: warn

@@ -83,6 +83,7 @@ def send_run_report(
     classify_stats: dict,
     autopilot_stats: dict,
     needs_review: list[dict],
+    zendesk_stats: dict | None = None,
 ) -> bool:
     """Post the per-run digest + alerts. One message per run."""
     assigned = autopilot_stats.get("assigned", 0)
@@ -136,6 +137,139 @@ def send_run_report(
     if errors:
         lines.append(
             f":rotating_light: *{errors} assignment(s) FAILED* against Productboard — check the log."
+        )
+
+    zd_lines = zendesk_lines(zendesk_stats)
+    if zd_lines:
+        lines.append("")
+        lines.extend(zd_lines)
+
+    return _post(cfg, {"text": "\n".join(lines)})
+
+
+def zendesk_lines(stats: dict | None) -> list[str]:
+    """Slack lines for the PB → Zendesk transfer. Counts and links only —
+    never note titles, text or requester emails. Empty when there's nothing
+    worth saying."""
+    if not stats:
+        return []
+    if stats.get("blocked"):
+        return [f":rotating_light: *Zendesk transfer blocked* — {stats['blocked']}. "
+                "Notes tagged send-to-zendesk are waiting."]
+    done = stats.get("transferred", 0) + stats.get("completed_after_partial_failure", 0)
+    review = stats.get("needs_review", 0)
+    failed = stats.get("failed", 0)
+    if not (done or review or failed or stats.get("already_transferred") or stats.get("skipped")):
+        return []
+    out = [f":incoming_envelope: *Zendesk:* {done} note(s) sent to support"
+           + (f" ({stats['completed_after_partial_failure']} finished after an earlier failure)"
+              if stats.get("completed_after_partial_failure") else "")
+           + (f", {stats['already_transferred']} already sent" if stats.get("already_transferred") else "")
+           + "."]
+    for n in stats.get("notes") or []:
+        if n.get("outcome") == "needs_review" and n.get("pb_url"):
+            out.append(f"• <{n['pb_url']}|Note> has no submitter email — "
+                       "add a customer with an email, or remove the tag")
+    if review and not any(n.get("outcome") == "needs_review" and n.get("pb_url")
+                          for n in stats.get("notes") or []):
+        out.append(f"• {review} note(s) have no submitter email and stay tagged")
+    if failed:
+        out.append(f":warning: {failed} transfer(s) failed — they stay tagged and are "
+                   "retried tomorrow. Check the log.")
+    if stats.get("skipped"):
+        out.append(f"• {stats['skipped']} note(s) held back by max_per_run")
+    return out
+
+
+def send_zendesk_report(cfg: Config, stats: dict) -> bool:
+    """Standalone message for a manual `zendesk-transfer` run."""
+    lines = zendesk_lines(stats)
+    if not lines:
+        return False
+    return _post(cfg, {"text": "\n".join(lines)})
+
+
+TENDER_BOARD_URL = (
+    "https://aidn.productboard.com/prioritization/"
+    "MTpQcmlvcml0aXphdGlvbkJvYXJkOjFkM2FhMDNmLTFmZDUtNDA3Mi05OGQ1LTM1NGRhYTgyOWVkMA=="
+)
+
+# How many findings of one kind to spell out before collapsing to a count.
+MAX_LISTED_FINDINGS = 8
+
+
+def send_tender_watchdog_report(cfg: Config, report, *, owner_mention: str = "") -> bool:
+    """Post the tender commitment board coverage report.
+
+    `report` is a backend.tender_watchdog.WatchdogReport. Posts to the same
+    webhook as the assignment digest — currently #support-productboard, which
+    is where the Notion routine already directs Productboard edge cases.
+
+    Silence must never be ambiguous, so this posts even when everything is
+    clean: an all-clear line is the signal that the check actually ran.
+    """
+    from .tender_watchdog import (
+        FINDING_INCOMPLETE_PAIR, FINDING_MISSING_FIELD, FINDING_MISSING_OPTIONS,
+        FINDING_NAMING_DRIFT, FINDING_PREFIX_ANOMALY,
+    )
+
+    lines: list[str] = [
+        f":clipboard: *<{TENDER_BOARD_URL}|Tender Commitment board> — weekly coverage check*"
+    ]
+
+    if report.inconclusive:
+        lines.append(
+            f":rotating_light: *Check could not run:* {report.inconclusive}\n"
+            "_Do not read this as 'all clear'._"
+        )
+        return _post(cfg, {"text": "\n".join(lines)})
+
+    lines.append(
+        f"{len(report.tenders_with_options)} tender(s) with requirements in PB · "
+        f"{len(report.tenders_with_deadline_field)} with a committed-deadline field."
+    )
+
+    if report.ok:
+        lines.append(
+            ":white_check_mark: Every tender with requirements has a matching "
+            "committed-deadline field, and the naming is consistent. :palm_tree:"
+        )
+        return _post(cfg, {"text": "\n".join(lines)})
+
+    sections = [
+        (FINDING_MISSING_FIELD,
+         ":rotating_light: *Missing from the board* — no committed-deadline field, "
+         "so the tender cannot show up as a column or a filter:"),
+        (FINDING_MISSING_OPTIONS,
+         ":warning: *Field exists but no requirements logged* — tender team to confirm:"),
+        (FINDING_INCOMPLETE_PAIR,
+         ":warning: *Only one of T / S present:*"),
+        (FINDING_NAMING_DRIFT,
+         ":mag: *Naming drift* (report only — renaming a field affects every board "
+         "using it as a column):"),
+        (FINDING_PREFIX_ANOMALY,
+         ":mag: *Off-convention option names:*"),
+    ]
+
+    for kind, header in sections:
+        group = [f for f in report.findings if f.kind == kind]
+        if not group:
+            continue
+        lines.append("")
+        lines.append(header)
+        for f in group[:MAX_LISTED_FINDINGS]:
+            lines.append(f"• *{f.tender}* — {f.detail}")
+            if f.action and f.severity == "alert":
+                lines.append(f"    ↳ _{f.action}_")
+        if len(group) > MAX_LISTED_FINDINGS:
+            lines.append(f"… and {len(group) - MAX_LISTED_FINDINGS} more.")
+
+    if report.alerts:
+        who = owner_mention or "_(no owner configured — set `[tender_watchdog].owner_mention`)_"
+        lines.append("")
+        lines.append(
+            f"{who} — the three steps above are UI-only: Productboard's API cannot "
+            "create a custom field, a board column, or a board filter."
         )
 
     return _post(cfg, {"text": "\n".join(lines)})

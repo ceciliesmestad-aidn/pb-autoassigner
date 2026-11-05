@@ -11,10 +11,6 @@ ssl_verify = false
 patch_delay_seconds = 0.3
 # PB REST API version: "v2" (current) or "v1" (sunset 2026-07-08, fallback only).
 api_version = "v2"
-# Which PB REST API major version to talk. "v1" or "v2".
-# v1 is deprecated and sunsets 2026-07-08. Flip to "v2" once the v2 client has
-# been verified end-to-end on the live workspace. See docs/v2_migration_plan.md.
-api_version = "v2"
 
 [anthropic]
 # Anthropic API key. Also honoured via env var ANTHROPIC_API_KEY.
@@ -71,6 +67,36 @@ webhook_url = ""
 enabled = true
 # false behind a corporate TLS-intercepting proxy, true in the cloud.
 ssl_verify = true
+
+[tender_watchdog]
+# Weekly read-only coverage check on the Tender Commitment board.
+enabled = true
+# Slack mention for whoever owns the UI-only steps (create the per-tender DATE
+# field, add the board column, add the board filter). A Slack user id renders
+# as a real ping, e.g. "<@U08GRQK3EH4>".
+owner_mention = ""
+
+[zendesk]
+# Productboard -> Zendesk transfer. A human tags a note `send-to-zendesk`;
+# the daily run creates a support ticket and tags the note `sent-to-zendesk`.
+# Keep false until credentials and the PB owner are verified
+# (`python -m backend.cli zendesk-transfer --dry-run`).
+enabled = false
+base_url = "https://aidnsupport.zendesk.com"
+# Integration user + API token. Prefer env vars ZENDESK_EMAIL / ZENDESK_API_TOKEN.
+# Never commit real values.
+email = ""
+api_token = ""
+# Productboard member who owns transferred notes (head of support).
+pb_owner_email = "torstein.bore@aidn.no"
+trigger_tag = "send-to-zendesk"
+completed_tag = "sent-to-zendesk"
+ticket_tag = "from_productboard"
+# Optional Zendesk group id for routing. 0 = Zendesk default.
+group_id = 0
+# false behind Aidn's corporate proxy (Zscaler), true in the cloud.
+ssl_verify = false
+max_per_run = 50
 
 [server]
 host = "127.0.0.1"

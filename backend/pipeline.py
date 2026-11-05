@@ -18,8 +18,14 @@ log = logging.getLogger(__name__)
 def ingest(
     conn: sqlite3.Connection,
     client: pb_client.PBClient,
+    *,
+    exclude_tag: str = "",
 ) -> dict:
-    """Pull unassigned notes from PB, upsert into SQLite."""
+    """Pull unassigned notes from PB, upsert into SQLite.
+
+    `exclude_tag`: notes carrying this tag are left out of classification —
+    used for `send-to-zendesk`, which a human has already routed to support.
+    """
     run_id = db.start_run(conn, "ingest")
     inserted = 0
     updated = 0
@@ -38,6 +44,13 @@ def ingest(
         with db.transaction(conn):
             db.finish_run(conn, run_id, {"error": str(e), "stage": "fetch"})
         raise
+
+    if exclude_tag:
+        from .zendesk_transfer import has_tag
+        before = len(raw_notes)
+        raw_notes = [n for n in raw_notes if not has_tag(n, exclude_tag)]
+        if before != len(raw_notes):
+            log.info("ingest: left out %d note(s) tagged %r", before - len(raw_notes), exclude_tag)
 
     log.info("ingest: PB returned %d unassigned notes; upserting…", len(raw_notes))
     company_names = client.company_names()  # v2: id→name map; v1: {}

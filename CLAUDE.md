@@ -8,7 +8,11 @@ This file is read by Claude Code at the start of every session. It covers everyt
 
 Pulls unassigned notes from Productboard, uses Claude (Haiku + Sonnet) to suggest which PM should own each note based on per-PM scope documents, and shows the suggestions in a review UI. A human confirms each assignment before it's pushed back to Productboard. No autopilot — every assignment is intentional.
 
-**PMs currently in the system (updated 2026-10-05):** Line Adde (CPR), Sandra Otteraaen (Treatment), Kristin Shovick (Case Handling), Hanne Linaae (Messaging), Erik Story (AI & Automation), Fredrik Pedersen (Patient), Jens Malm (Back Office — economy/plassadmin/hjelpemidler only), Silje Larsen (IAM, interim — replaced Abraham Guzman 2026-10-05; his 145 non-archived notes moved to her 2026-10-06 via `scripts/migrate_abraham_to_silje.py`), Ashild Herdlevaer (Collaboration), Sally Renshaw (Design System), Therese Borter (Navigator), Viktor Ernholm (Mobile App), Fredrik Behn (OpenAIdn), plus custom PMs in `pms_custom.json`: Cathrine Stenstadvold (Product Leadership — notatblokk/egne notater/huskelapp), Séamus Beirne (Data & Analytics — all rapportering/analyse/statistikk/KOSTRA/Aidn Analytics, moved from Jens 2026-08-12), Adil Rashid (Health Station — helsestasjon/skolehelsetjeneste, piloting), Knut Ole Sjøli (Infrastructure — devbox / smoke test / test+Zendesk noise during the Zendesk rollout, added 2026-09-14), Magne Davidsen (Data Migrations — legacy-EPJ onboarding migration + ongoing migration tooling/data quality, also takes test+migrering feedback that isn't devbox/Zendesk, added 2026-09-14).
+**PMs currently in the system (updated 2026-10-05):** Line Adde (CPR), Sandra Otteraaen (Treatment), Kristin Shovick (Case Handling), Hanne Linaae (Messaging), Erik Story (AI & Automation), Fredrik Pedersen (Patient), Jens Malm (Back Office — economy/plassadmin/hjelpemidler only), Silje Larsen (IAM, interim — replaced Abraham Guzman 2026-10-05; his 145 non-archived notes moved to her 2026-10-06 via `scripts/migrate_abraham_to_silje.py`), Ashild Herdlevaer (Collaboration — also ruteplanlegger/turnus/vaktplan since 2026-10-30), Ronald Baars (Design System — replaced Sally Renshaw 2026-10-30; not a PM, Design System isn't a product team), **Team Navigator → Erik Story, interim** (since 2026-10-30, Therese Borter leaving; see "Interim cover" below), Viktor Ernholm (Mobile App), Fredrik Behn (OpenAIdn), plus custom PMs in `pms_custom.json`: Cathrine Stenstadvold (Product Leadership — notatblokk/egne notater/huskelapp), Séamus Beirne (Data & Analytics — all rapportering/analyse/statistikk/KOSTRA/Aidn Analytics, moved from Jens 2026-08-12), Adil Rashid (Health Station — helsestasjon/skolehelsetjeneste, piloting), Knut Ole Sjøli (Infrastructure — devbox / smoke test / test+Zendesk noise during the Zendesk rollout, added 2026-09-14), Magne Davidsen (Data Migrations — legacy-EPJ onboarding migration + ongoing migration tooling/data quality, also takes test+migrering feedback that isn't devbox/Zendesk, added 2026-09-14), William Knudtzon (Team Scheduling — calendar, avdelingskalender, timebok, appointments, SMS/reminders on appointments; moved from Fredrik 2026-10-30), Ida Sund Walsøe (Team Training & Support — new team 2026-10-30: help centre, hjelpeknapp, Øvingsrommet, opplæring, demo environment, onboarding from the product side; 13 training/help notes moved to her from Therese's old Navigator set).
+
+**There is no "Team Workforce" at Aidn.** It was a placeholder in the first scope files and left ruteplanlegger/turnus notes open; removed 2026-10-30.
+
+**Interim cover (2026-10-30).** A team without its own PM is a registry entry whose `email` is a routing key and `pb_owner_email` the real PB owner. Team Navigator = `navigator.interim@aidn.no` → owner Erik Story, tag "Team Navigator" (`scopes/team_navigator.yaml`). Insights/training for it only use Erik's notes tagged "Team Navigator". When a new Navigator PM starts: set their email in `backend/owners.py`, drop `pb_owner_email`, then `python -m scripts.migrate_owner --from erik.story@aidn.no --to <new> --only-tag "Team Navigator" --preview` / `--apply`. `scripts/migrate_owner.py` is the general preview-then-apply tool for moving notes between owners.
 
 ---
 
@@ -122,6 +126,14 @@ owns data-migration testing feedback that does **not** mention devbox or Zendesk
 Magne also owns the normal domain scope for Team Data Migrations: legacy-EPJ data
 migration at municipality onboarding (CosDoc/Gerica/Profil/SFM → Aidn) and ongoing
 migration tooling/data-quality work, independent of the test-routing rule above.
+
+### "Manuell avslutning av flyt" → Erik Story (changed 2026-10-28)
+
+Notes titled "Tilbakemelding om manuell avslutning av flyt i Aidn (Team Automation)" used to be
+excluded (left open) as internal automation feedback. Per Cecilie 2026-10-28 they now go to
+**Erik Story** (Team AI & Automation; PB tag "Team Automation"). The exclude_rule was removed from
+`_global.yaml`, a routing principle added there, and the phrase moved from hard_negatives to
+includes/keywords in `erik_story.yaml`. `fredrik_pedersen.yaml` keeps it as a hard_negative (→ Erik).
 
 **Known email quirks:**
 - Sandra Otteraaen: double-a in `otteraaen`
@@ -270,6 +282,40 @@ python -m backend.cli tender-watchdog --raw        # dump PB's raw field config
 **⚠️ Pending one live verification.** The sandbox this was written in cannot reach `api.productboard.com`, so `feature_field_config()` and `select_field_values()` were written against the documented v2 shape with defensive unwrapping (`_unwrap_fields` / `_unwrap_options` in `pb_client.py`, each covering four payload variants). Run `python -m backend.cli tender-watchdog --raw` once on Cecilie's Mac and confirm the field descriptors come back with `name` and `type`/`fieldType`; tighten the unwrappers if the shape differs. Until that's done, treat an empty report as unverified rather than clean.
 
 **Not yet built (phase 2):** the BAFO-to-PB skill — point it at the tender's Drive folder, it extracts requirements, proposes notes + feature links + commitment dates, and writes only what a human confirms. Decided 2026-09-07 that requirement→feature linking is **always reviewed**, never auto-written. Note that the Drive side can't run in GitHub Actions (no Google auth there) — that half belongs in Cowork with the Drive connector.
+
+## Confirmation emails to municipalities (test phase, added 2026-10-28)
+
+Triggered by Bodø asking for better feedback when they submit suggestions. When a note is assigned, the submitter gets a short confirmation: thanks, a 2–3 sentence KI summary, and a neutral "the product team responsible for this area will assess and prioritise it". No team names, no promises. Fixed text approved by Cecilie (Aidn stil og tone) lives in `backend/acknowledge.py` (`SUBJECT_TEMPLATE`, `BODY_TEMPLATE`).
+
+- **Who gets one:** the note's customer is a PB *user* whose email ends with `.kommune.no`. Everyone else is recorded as skipped (`no_customer`, `not_kommune`, `lookup_failed`, `duplicate`). Non-kommune addresses are never stored.
+- **Drafts only.** `acknowledge.py` has no send path, and `test_acknowledge_module_cannot_send` enforces that structurally. Planned sending: Zendesk, no-reply address, tag `forbedringsforslag`, ticket straight to Solved. Not built yet.
+- **Config:** `[acknowledge]` in config (`enabled` default **false**, `since` keeps the backlog out, `kommune_suffix`, `model` = Haiku).
+- **Commands:**
+  - `python -m backend.cli ack-test <note-uuid> …` → reads those notes from PB (read-only, no DB), writes `data/ack_test.html`
+  - `python -m backend.cli ack-preview --hours 24` → renders drafts made by the daily run to `data/ack_preview.html`
+- **Verified live 2026-10-28:** the customer email is read from `GET /v2/entities/{user-id}` (`_email_from_entity`). The first `ack-test` on Cecilie's Mac gave 9 drafts out of 10 notes, and the one without a customer was correctly skipped.
+- **Next:** Zendesk setup with Knut Ole (API token, no-reply address, tag, auto-close replies). The cloud run stays `enabled = false` until then. Note content must not go to GitHub.
+- **Duplicates (Cecilie: "no second reply"):** `is_duplicate()` catches a resubmission from the same recipient, across runs and within a run. It counts as a duplicate if the text is identical after normalising (case, spaces, punctuation), or if the title is the same and the text is at least 90 % similar. The same generic title with different text still gets its own confirmation.
+- **Parked 2026-10-28 (Cecilie): progress updates and smart replies.** These ideas were tested and set aside to keep the scope simple:
+  - A second message when a linked feature lands in the shared **Now** release (Now/Next/Later are releases in PB, readable via API). It was feasible.
+  - KI-based roadmap or help-center matching. The roadmap matching was too unreliable. Help-center articles live in Sanity, project `help`, 313 `helpArticle` docs.
+  - Stick to the single confirmation.
+- **Known gaps:** a typo domain like `oygaden.kommune.no` still passes the filter, so the email would bounce. The same person submitting under two different addresses is not caught as a duplicate.
+
+## Productboard → Zendesk transfer (added 2026-11-05, not live yet)
+
+Some suggestions in PB are really support requests. A human adds the PB tag **`send-to-zendesk`**; that tag is the approval (no AI decides what is support). The daily run then creates one Zendesk ticket in `aidnsupport.zendesk.com` and, only after Zendesk confirms, does one PB PATCH: add `sent-to-zendesk`, set owner **Torstein Bore** (`torstein.bore@aidn.no`, head of support), mark processed, remove `send-to-zendesk`.
+
+- **Code:** `backend/zendesk_client.py` (3 calls: lookup by external_id, create, private note), `backend/zendesk_transfer.py` (scan + state machine), `PBClient.mark_sent_to_zendesk()` / `member_exists()`, table `zendesk_transfers`, tests in `tests/test_zendesk_transfer.py`.
+- **Ticket:** subject = note title, first public comment = note text, requester = the note's PB customer user (same lookup as the confirmation emails), `external_id = productboard:<uuid>`, tag `from_productboard`. The PB link goes in a **private internal note** because the requester sees the public comment and gets Zendesk's normal "received" email (Cecilie: the submitter should follow the normal support flow).
+- **Duplicate guard:** local row (unique per note) → if no ticket known, always look up the external_id in Zendesk before creating (covers the Actions cache being evicted) → an uncertain create (timeout/5xx) is never retried blindly. States: `pending`, `failed`, `needs_review`, `ticket_created`, `completed`.
+- **No requester email** → nothing sent, tag stays, Slack lists the note (Cecilie: "then it just stays").
+- **Run order:** transfers run before ingest; `ingest(exclude_tag=…)` keeps tagged notes away from the classifier/autopilot.
+- **Owner check:** a live run is blocked unless `pb_owner_email` is found via `GET /v2/members`.
+- **Commands:** `python -m backend.cli zendesk-transfer --dry-run` (read-only, lists what would happen), `python -m backend.cli zendesk-transfer` (live, needs `enabled = true`).
+- **Config:** `[zendesk]` (`enabled` default false). Secrets via env `ZENDESK_EMAIL` / `ZENDESK_API_TOKEN` (GitHub secrets; already wired into `daily-run.yml`).
+- **Verified live 2026-11-05:** first `--dry-run` on Cecilie's Mac found her test note, `owner_verified: true` (so `GET /v2/members` shape works) and resolved the requester email.
+- **⚠️ Still needs live verification:** (1) the `set owner` / `set processed` patch ops in one PATCH, (2) Zendesk accepting `requester {email, name}` for new end users and firing the "received" trigger. Both are covered by the first real transfer once the Zendesk token exists. Setup steps: `docs/zendesk_transfer_setup.md`.
 
 ## Troubleshooting
 

@@ -357,6 +357,158 @@ class PBClient:
         time.sleep(self.patch_delay_seconds)
         return status
 
+    def mark_sent_to_zendesk(self, note_uuid: str, *, owner_email: str,
+                             add_tag: str, remove_tag: str) -> int:
+        """One PATCH that completes a Zendesk transfer on the PB side.
+
+        All four ops in a single request so PB applies them together: add the
+        completed tag, set the owner, mark processed, and remove the trigger
+        tag last. Every op is idempotent, so a retry after a partial failure
+        is safe. Returns HTTP status.
+
+        ⚠️ `set` on `owner`/`processed` follows the documented v2 patch-op
+        shape but has not been verified live yet (see CLAUDE.md).
+        """
+        if self.api_version != "v2":
+            raise PBError(400, "mark_sent_to_zendesk requires api_version v2", url="")
+        body = {"data": {"patch": [
+            {"op": "addItems", "path": "tags", "value": [{"name": add_tag}]},
+            {"op": "set", "path": "owner", "value": {"email": owner_email}},
+            {"op": "set", "path": "processed", "value": True},
+            {"op": "removeItems", "path": "tags", "value": [{"name": remove_tag}]},
+        ]}}
+        status, _ = self._request("PATCH", f"/v2/notes/{note_uuid}", body=body)
+        time.sleep(self.patch_delay_seconds)
+        return status
+
+    def member_exists(self, email: str) -> bool:
+        """True if `email` is a member of the PB workspace. Read-only.
+
+        Pages through GET /v2/members (needs the members:pii:read scope, which
+        the token already has for owner[email] filters). Raises PBError if the
+        endpoint can't be read, so callers can treat "unknown" as "not verified".
+        ⚠️ Response shape not verified live; accepts {fields:{email}} and {email}.
+        """
+        target = (email or "").strip().lower()
+        if not target:
+            return False
+        url = PB_API + "/v2/members?" + urllib.parse.urlencode({"pageLimit": V2_PAGE_LIMIT})
+        while url:
+            _, payload = self._request_url("GET", url)
+            for m in (payload or {}).get("data") or []:
+                if not isinstance(m, dict):
+                    continue
+                fields = m.get("fields") if isinstance(m.get("fields"), dict) else {}
+                cand = fields.get("email") or m.get("email") or ""
+                if isinstance(cand, str) and cand.strip().lower() == target:
+                    return True
+            url = (((payload or {}).get("links") or {}).get("next")) or ""
+            if url:
+                time.sleep(PAGINATION_DELAY)
+        return False
+
+    # ─── entity field configuration (read-only) ───────────────────────────────
+    #
+    # Used by the tender commitment board watchdog. Both methods are GET-only
+    # and never mutate anything: there is no v2 endpoint for creating a custom
+    # field *definition* anyway, only for creating values of an existing
+    # select field.
+
+    def feature_field_config(self) -> list[dict]:
+        """Field descriptors for features, from GET /v2/entities/configurations/feature.
+
+        Returns a list of `{name, id, type, ...}` dicts. The exact envelope has
+        moved around between v2 revisions, so the payload is unwrapped
+        defensively — see `_unwrap_fields`. Raises PBError on HTTP failure.
+        """
+        if self.api_version != "v2":
+            raise PBError(400, "feature_field_config requires api_version v2", url="")
+        _, payload = self._request("GET", "/v2/entities/configurations/feature")
+        return _unwrap_fields(payload)
+
+    def select_field_values(self, fld: dict | str) -> list[dict] | None:
+        """All options of a select-type field.
+
+        Accepts either the field descriptor (preferred — options for fields with
+        ≤1000 values come back inline, saving a round trip) or a bare field id.
+        Follows `links.next` for large option sets. Returns None when the
+        options genuinely could not be read, so callers can distinguish
+        "no options" from "lookup failed" — an empty list would otherwise read
+        as a clean bill of health.
+        """
+        if self.api_version != "v2":
+            raise PBError(400, "select_field_values requires api_version v2", url="")
+
+        field_id = fld if isinstance(fld, str) else (fld.get("id") or "")
+
+        # Inline options, when the descriptor carries them.
+        if isinstance(fld, dict):
+            inline = _unwrap_options(fld)
+            if inline:
+                return inline
+
+        if not field_id:
+            log.error("select_field_values: no field id available")
+            return None
+
+        out: list[dict] = []
+        url = (PB_API + f"/v2/entities/fields/{urllib.parse.quote(field_id, safe='')}"
+                        f"/values?pageLimit={V2_PAGE_LIMIT}")
+        seen_pages = 0
+        while url and seen_pages < 50:
+            try:
+                _, payload = self._request_url("GET", url)
+            except PBError as e:
+                log.error("select_field_values: HTTP %s for field %s", e.status, field_id)
+                return None
+            if payload is None:
+                break
+            out.extend(_unwrap_options(payload))
+            url = ((payload.get("links") or {}).get("next")) or ""
+            seen_pages += 1
+            if url:
+                time.sleep(PAGINATION_DELAY)
+        return out
+
+
+def _unwrap_fields(payload) -> list[dict]:
+    """Pull the field-descriptor list out of a configuration response.
+
+    Tolerates the shapes v2 has used: a bare list, {data: {fields: [...]}},
+    {data: [...]}, and {fields: [...]}.
+    """
+    if payload is None:
+        return []
+    if isinstance(payload, list):
+        return [f for f in payload if isinstance(f, dict)]
+    if isinstance(payload, dict):
+        for candidate in (
+            payload.get("fields"),
+            (payload.get("data") or {}).get("fields") if isinstance(payload.get("data"), dict) else None,
+            payload.get("data"),
+        ):
+            if isinstance(candidate, list):
+                return [f for f in candidate if isinstance(f, dict)]
+    log.warning("_unwrap_fields: unrecognised configuration payload shape: %s",
+                type(payload).__name__)
+    return []
+
+
+def _unwrap_options(payload) -> list[dict]:
+    """Pull select-option dicts out of a field descriptor or a values response."""
+    if not isinstance(payload, dict):
+        return []
+    for key in ("values", "options", "data"):
+        candidate = payload.get(key)
+        if isinstance(candidate, list):
+            return [o for o in candidate if isinstance(o, dict) and (o.get("name") or o.get("label"))]
+        if isinstance(candidate, dict):
+            for inner in ("values", "options", "data"):
+                nested = candidate.get(inner)
+                if isinstance(nested, list):
+                    return [o for o in nested if isinstance(o, dict) and (o.get("name") or o.get("label"))]
+    return []
+
 
 def _is_empty_draft(raw: dict) -> bool:
     """True for abandoned '+ Note' drafts: no content and no real title.

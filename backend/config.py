@@ -88,6 +88,65 @@ class SlackConfig:
 
 
 @dataclass
+class TenderWatchdogConfig:
+    """Weekly Tender Commitment board coverage check (read-only)."""
+    enabled: bool = True
+    # Slack mention for whoever owns the UI-only steps (create the date field,
+    # add the board column, add the board filter). A user id renders as a real
+    # ping: "<@U08GRQK3EH4>". A plain string is fine too. Leave empty and the
+    # digest says so rather than silently addressing nobody.
+    owner_mention: str = ""
+
+
+@dataclass
+class AcknowledgeConfig:
+    """Confirmation emails to municipality submitters (added 2026-10-28).
+
+    TEST PHASE: the daily run only creates drafts in the ack_drafts table.
+    There is no sending code path at all yet — flipping `enabled` on can never
+    email anyone.
+    """
+    enabled: bool = False
+    # Only notes created in PB on/after this date get a draft — keeps the
+    # existing backlog from turning into hundreds of emails on day one.
+    since: str = "2026-10-28"
+    # Submitter's email domain must end with this to get a confirmation.
+    kommune_suffix: str = ".kommune.no"
+    # Cheap model — the summary is 2–3 sentences.
+    model: str = "claude-haiku-4-5-20251001"
+    batch_size: int = 10
+    max_per_run: int = 100
+
+
+@dataclass
+class ZendeskConfig:
+    """Productboard → Zendesk transfer (added 2026-11-05).
+
+    A human adds the PB tag `trigger_tag` to a note that is really a support
+    request. The scheduled run creates a Zendesk ticket for it, then swaps the
+    tag for `completed_tag`, assigns the note to `pb_owner_email` and marks it
+    processed. Off by default until credentials and the PB owner are verified.
+    """
+    enabled: bool = False
+    base_url: str = "https://aidnsupport.zendesk.com"
+    # Integration/agent user + API token. Prefer env vars ZENDESK_EMAIL and
+    # ZENDESK_API_TOKEN (GitHub secrets in the cloud). Never commit them.
+    email: str = ""
+    api_token: str = ""
+    # Productboard member who owns transferred notes (head of support).
+    pb_owner_email: str = ""
+    trigger_tag: str = "send-to-zendesk"
+    completed_tag: str = "sent-to-zendesk"
+    ticket_tag: str = "from_productboard"
+    # Optional Zendesk group to route the ticket to. 0 = Zendesk's default.
+    group_id: int = 0
+    ssl_verify: bool = True
+    timeout_seconds: float = 30.0
+    # Safety cap: more tagged notes than this in one run → the rest wait.
+    max_per_run: int = 50
+
+
+@dataclass
 class ServerConfig:
     host: str = "127.0.0.1"
     port: int = 8765
@@ -106,6 +165,9 @@ class Config:
     classifier: ClassifierConfig = field(default_factory=ClassifierConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
     slack: SlackConfig = field(default_factory=SlackConfig)
+    tender_watchdog: TenderWatchdogConfig = field(default_factory=TenderWatchdogConfig)
+    acknowledge: AcknowledgeConfig = field(default_factory=AcknowledgeConfig)
+    zendesk: ZendeskConfig = field(default_factory=ZendeskConfig)
     server: ServerConfig = field(default_factory=ServerConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
 
@@ -140,6 +202,9 @@ def load_config(path: Path | str | None = None) -> Config:
         classifier=ClassifierConfig(**(raw.get("classifier") or {})),
         training=TrainingConfig(**(raw.get("training") or {})),
         slack=SlackConfig(**(raw.get("slack") or {})),
+        tender_watchdog=TenderWatchdogConfig(**(raw.get("tender_watchdog") or {})),
+        acknowledge=AcknowledgeConfig(**(raw.get("acknowledge") or {})),
+        zendesk=ZendeskConfig(**(raw.get("zendesk") or {})),
         server=ServerConfig(**(raw.get("server") or {})),
         storage=StorageConfig(**(raw.get("storage") or {})),
     )
@@ -153,6 +218,10 @@ def load_config(path: Path | str | None = None) -> Config:
         cfg.storage.db_path = env_db
     if env_slack := os.environ.get("SLACK_WEBHOOK_URL"):
         cfg.slack.webhook_url = env_slack
+    if env_zd_email := os.environ.get("ZENDESK_EMAIL"):
+        cfg.zendesk.email = env_zd_email
+    if env_zd_token := os.environ.get("ZENDESK_API_TOKEN"):
+        cfg.zendesk.api_token = env_zd_token
 
     return cfg
 
