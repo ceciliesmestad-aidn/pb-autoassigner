@@ -71,8 +71,10 @@ jobs:
         run: |
           if [ "$MODE" = "one-note" ]; then
             # Inputs are passed through env, never pasted into the script.
+            # Strip spaces/newlines/quotes that sneak in when copy-pasting.
+            NOTE_ID=$(printf '%s' "$NOTE_ID" | tr -d "[:space:]\"'\`")
             if ! printf '%s' "$NOTE_ID" | grep -Eq '^[0-9a-fA-F-]{36}$'; then
-              echo "note_id must be a PB note UUID (36 characters)"; exit 1
+              echo "note_id must be a PB note UUID (36 characters), got ${#NOTE_ID} characters"; exit 1
             fi
             python -m backend.cli --config config.ci.toml zendesk-transfer --only "$NOTE_ID"
           else
