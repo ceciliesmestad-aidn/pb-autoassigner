@@ -47,7 +47,7 @@ owner_mention = "<@U08GRQK3EH4>"
 # PB -> Zendesk transfer. Credentials come from GitHub secrets
 # ZENDESK_OPERATOR_OAUTH_CLIENT_ID / _SECRET. Flip to true only after a clean
 # local dry-run and one verified live transfer.
-enabled = false
+enabled = true
 base_url = "https://aidnsupport.zendesk.com"
 oauth_client_id = ""        # from env ZENDESK_OPERATOR_OAUTH_CLIENT_ID
 oauth_client_secret = ""    # from env ZENDESK_OPERATOR_OAUTH_CLIENT_SECRET

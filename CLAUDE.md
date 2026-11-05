@@ -302,7 +302,7 @@ Triggered by Bodø asking for better feedback when they submit suggestions. When
   - Stick to the single confirmation.
 - **Known gaps:** a typo domain like `oygaden.kommune.no` still passes the filter, so the email would bounce. The same person submitting under two different addresses is not caught as a duplicate.
 
-## Productboard → Zendesk transfer (added 2026-11-05, not live yet)
+## Productboard → Zendesk transfer (added 2026-11-05, live in the daily run since 2026-11-05)
 
 Some suggestions in PB are really support requests. A human adds the PB tag **`send-to-zendesk`**; that tag is the approval (no AI decides what is support). The daily run then creates one Zendesk ticket in `aidnsupport.zendesk.com` and, only after Zendesk confirms, does one PB PATCH: add `sent-to-zendesk`, set owner **Torstein Bore** (`torstein.bore@aidn.no`, head of support), mark processed, remove `send-to-zendesk`.
 
@@ -318,7 +318,7 @@ Some suggestions in PB are really support requests. A human adds the PB tag **`s
 - **Config:** `[zendesk]` (`enabled` default false). Secrets are wired into `daily-run.yml` and `zendesk-transfer.yml`.
 - **Verified live 2026-11-05:** first `--dry-run` on Cecilie's Mac found her test note, `owner_verified: true` (so `GET /v2/members` shape works) and resolved the requester email.
 - **Verified live 2026-11-05 (GitHub, run #3):** OAuth token exchange works with scope `tickets:read tickets:write` (`read write` gave `invalid_scope`), and the external_id lookup in Zendesk works.
-- **First real transfer 2026-11-05 (GitHub run #5, `one-note`):** Cecilie's test note `fdcd4574-0d47-4497-9857-b0a75fa51a85` went through; the combined PB PATCH was accepted (tag swapped to `sent-to-zendesk`). Confirmed by eye: PB owner = Torstein, processed, tags swapped; Zendesk ticket #3641 "Via API", requester Cecilie, subject right, tag `from_productboard`, PB link as internal note. **Open issue:** the first comment (sent with `public: true`) shows as *Internal* in Zendesk and no "received" email arrived. Likely because the requester (Cecilie) is a Zendesk agent, or because of Aidn's Zendesk triggers/settings; Knut Ole to check, then retest with a real end-user requester. Also: the OAuth client acts as Knut Ole's user, so the internal note shows him as author. The daily run stays `enabled = false` until the notification works. Setup steps: `docs/zendesk_transfer_setup.md`.
+- **First real transfer 2026-11-05 (GitHub run #5, `one-note`):** Cecilie's test note `fdcd4574-0d47-4497-9857-b0a75fa51a85` went through; the combined PB PATCH was accepted (tag swapped to `sent-to-zendesk`). Confirmed by eye: PB owner = Torstein, processed, tags swapped; Zendesk ticket #3641 "Via API", requester Cecilie, subject right, tag `from_productboard`, PB link as internal note. The first comment showed as *Internal* and no "received" email arrived — because the requester (Cecilie) is a Zendesk **agent**. **Second test (end-user requester, private Gmail, note `fa4255a2-…`) worked fully:** "received" email arrived, owner Torstein, tags swapped. Known edge: notes submitted by Aidn staff who are Zendesk agents become internal tickets with no email. The OAuth client acts as Knut Ole's user, so the internal note shows him as author (cosmetic; a dedicated integration user would fix it). Setup steps: `docs/zendesk_transfer_setup.md`.
 
 ## Troubleshooting
 
