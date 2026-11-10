@@ -156,7 +156,8 @@ def test_tagged_note_creates_one_ticket_with_expected_fields(zcfg):
     assert t["tags"] == ["from_productboard"]
     # PB link only in the private note, never in the public comment.
     assert "productboard.com" not in t["body"]
-    assert zd.internal_notes == [(1000, "Opprettet automatisk fra Productboard-notat: "
+    assert zd.internal_notes == [(1000, "Opprettet automatisk fra Productboard-notat. "
+                                  "Kommentarer fra produktteamet ligger på det opprinnelige notatet: "
                                   "https://aidn.productboard.com/insights/feedback?d=notes%2Fn1")]
 
 

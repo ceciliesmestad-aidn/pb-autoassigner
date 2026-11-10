@@ -42,7 +42,10 @@ log = logging.getLogger(__name__)
 
 EXTERNAL_ID_PREFIX = "productboard:"
 FALLBACK_SUBJECT = "Henvendelse fra Productboard"
-INTERNAL_NOTE_TEMPLATE = "Opprettet automatisk fra Productboard-notat: {url}"
+# PB's API does not expose note comments (checked 2026-11-10), so they can't be
+# copied over; the note tells Support where to find them instead.
+INTERNAL_NOTE_TEMPLATE = ("Opprettet automatisk fra Productboard-notat. "
+                          "Kommentarer fra produktteamet ligger på det opprinnelige notatet: {url}")
 
 OUTCOMES = ("transferred", "already_transferred", "completed_after_partial_failure",
             "needs_review", "skipped", "failed")
