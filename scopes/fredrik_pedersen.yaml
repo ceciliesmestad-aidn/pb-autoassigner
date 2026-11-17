@@ -39,6 +39,7 @@ excludes:
 
 tag_routes:
   - "team patient"
+  - "mitt aidn"   # fast regel i backend/tag_rules.py (2026-11-17): Mitt Aidn-tag → Fredrik, unntatt kalender/avtaler → William
 
 keywords_strong:
   - mitt aidn
@@ -54,6 +55,7 @@ keywords_strong:
   - mitt aidn app
 
 disambiguations:
+  - "Notater tagget «Mitt Aidn» (tilbakemelding fra pasienter/pårørende i appen) → Fredrik, med mindre de tydelig handler om kalender/avtaler/timebestilling → William Knudtzon (Team Scheduling), eller om søknad/plassering/vedtak → Kristin Shovick (Team Case Handling)"
   - "Kalender/avtaler (også avdelingskalender, timebok og SMS ved avtaler) → William Knudtzon (Team Scheduling), ikke Fredrik. Fredrik kun når notatet handler om selve Mitt Aidn-portalen, ikke om avtalen. Ruteplanlegging/turnus/vaktplan → Ashild (Collaboration)"
   - "'Digitale klager' via Mitt Aidn → Fredrik; klagesaksbehandling internt → Team Case Handling"
   - "'Tale-til-tekst' / AI-funksjoner → Erik (Team AI & Automation), selv om de eksponeres i pasientportalen"

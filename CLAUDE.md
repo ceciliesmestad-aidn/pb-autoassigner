@@ -135,6 +135,16 @@ excluded (left open) as internal automation feedback. Per Cecilie 2026-10-28 the
 `_global.yaml`, a routing principle added there, and the phrase moved from hard_negatives to
 includes/keywords in `erik_story.yaml`. `fredrik_pedersen.yaml` keeps it as a hard_negative (→ Erik).
 
+### "Mitt Aidn" tag → Fredrik Pedersen (added 2026-11-17)
+
+Feedback from the Mitt Aidn app (patients and next of kin) arrives in PB tagged **"Mitt Aidn"**. Per Cecilie 2026-11-17 these go to **Fredrik Pedersen** (Team Patient), **unless the note is clearly about calendar/scheduling** — those still go to **William Knudtzon** (Team Scheduling).
+
+- **Fixed rule, not AI:** `backend/tag_rules.py`, run first in `pipeline.classify_pending()`. Tagged + no scheduling word → suggestion to Fredrik, confidence 1.0, model `rule:mitt-aidn` (autopilot picks it up). Tagged + a scheduling word → normal AI routing (scope files send calendar to William).
+- **Scheduling words** (`SCHEDULING_STEMS`): kalender, avdelingskalender, avtale(r/n), gruppeavtale, timebok, timebestilling, timeavtale, bestille time, booke/booking, påminnelse, sms-varsel, innkalling. Edit the list there if notes land wrong.
+- **Søknad → Kristin (added same day):** tagged + an application word (`APPLICATION_STEMS`: søknad, søke om, plassering, vedtak) and no scheduling word → **Kristin Shovick** (Team Case Handling), confidence 1.0. Order: scheduling (→ AI/William) → søknad (→ Kristin) → everything else (→ Fredrik).
+- **One-off cleanup:** `python -m scripts.mitt_aidn_to_fredrik --preview` → `data/mitt_aidn_to_fredrik.json` with `move` (→ Fredrik) and `left_alone` (scheduling, current owner kept). Then `--apply`. Also adds the "Team Patient" tag.
+- Tests: `tests/test_tag_rules.py`.
+
 **Known email quirks:**
 - Sandra Otteraaen: double-a in `otteraaen`
 - Kristin Shovick: email is `kristin.shovick@aidn.no` (not `hoiaas` — the old address caused 422 errors on PATCH)

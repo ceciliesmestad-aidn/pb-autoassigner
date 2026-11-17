@@ -108,12 +108,22 @@ def classify_pending(
 ) -> dict:
     """Classify every note in state='new' and move it to state='suggested'."""
     scopes = scopes or scopes_loader.load_all(cfg.scopes_dir)
-    classifier = classify_mod.Classifier(cfg.anthropic, scopes)
 
     pending = db.notes_needing_classification(conn)
     if not pending:
         log.info("classify: no pending notes — nothing to do")
         return {"classified": 0, "escalated": 0}
+
+    # Fixed tag rules first (Mitt Aidn → Fredrik unless scheduling). These
+    # notes skip the AI and get confidence 1.0, so autopilot picks them up.
+    rule_routed = _apply_tag_rules(conn, pending)
+    if rule_routed:
+        pending = [r for r in pending if r["id"] not in rule_routed]
+        if not pending:
+            return {"classified": len(rule_routed), "escalated": 0,
+                    "rule_routed": len(rule_routed)}
+
+    classifier = classify_mod.Classifier(cfg.anthropic, scopes)
 
     log.info("classify: %d pending notes (scope hash=%s)", len(pending), scopes.combined_hash[:12])
 
@@ -164,14 +174,49 @@ def classify_pending(
                 escalated += 1
 
         stats = {
-            "classified": classified,
+            "classified": classified + len(rule_routed),
             "escalated": escalated,
+            "rule_routed": len(rule_routed),
             "scopes_hash": scopes.combined_hash,
         }
         db.finish_run(conn, run_id, stats)
 
     log.info("classify: done — %s", stats)
     return stats
+
+
+def _apply_tag_rules(conn: sqlite3.Connection, pending: list) -> set:
+    """Route notes matched by a fixed tag rule. Returns the routed note ids."""
+    from . import tag_rules
+
+    matched = [
+        (r, pm) for r in pending
+        if (pm := tag_rules.mitt_aidn_route(r["title"] or "", r["content"] or "",
+                                            _parse_tags(r["tags_json"])))
+    ]
+    if not matched:
+        return set()
+    run_id = db.start_run(conn, "classify")
+    with db.transaction(conn):
+        for r, pm in matched:
+            db.insert_suggestion(
+                conn,
+                note_id=r["id"],
+                run_id=run_id,
+                pm_email=pm,
+                confidence=1.0,
+                reasoning=("Fast regel: tagget «Mitt Aidn» og handler om søknad "
+                           "→ Team Case Handling (Kristin).")
+                if pm == tag_rules.APPLICATION_PM else
+                          ("Fast regel: tagget «Mitt Aidn» og handler ikke om "
+                           "kalender/avtaler eller søknad → Team Patient (Fredrik)."),
+                model=tag_rules.RULE_MODEL,
+                escalated=False,
+            )
+            db.set_note_state(conn, r["id"], "suggested")
+        db.finish_run(conn, run_id, {"rule_routed": len(matched), "rule": "mitt-aidn"})
+    log.info("classify: %d note(s) routed by the Mitt Aidn tag rule", len(matched))
+    return {r["id"] for r, _pm in matched}
 
 
 def auto_assign_high_confidence(
